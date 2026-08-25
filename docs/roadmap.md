@@ -4,16 +4,19 @@
 - [x] Modningsindeks med prognoseusikkerhed, testet
 - [x] Rangering af steder, testet
 - [x] Databaseskema med RLS og automatisk sløring
-- [ ] Supabase-projekt oprettet, migration kørt
-- [ ] Auth (Apple/Google) + profiler
-- [ ] Feltdagbog: opret, læs, rediger fund med vejrsnapshot
-- [ ] Regnstriben som React-komponent
+- [x] React-skal med alle fire faner + profil, bygget efter prototypen
+- [x] Regnstriben som React-komponent
+- [x] Feltdagbog: opret og læs fund med vejrsnapshot (datalag med session- + Supabase-adapter)
+- [x] Artsbestemmelse i UI + Edge Function `bestem` (nøglen serverside)
+- [ ] Supabase-projekt oprettet, migration kørt (Edge Functions udrullet)
+- [ ] Auth (Apple/Google) + profiler mod `profiles`-tabellen
+- [ ] Rediger og slet fund
 
 ## Fase 2 — felten
 - [ ] Kort med steder og egne nåle (MapLibre + PostGIS)
 - [ ] Hemmelige nåle med klientside-kryptering
-- [ ] Billedupload til Supabase Storage, tre slots
-- [ ] Artsbestemmelse via Edge Function (nøglen aldrig i frontend)
+- [ ] Billedupload til Supabase Storage, tre slots (i dag: data-URL'er i session)
+- [x] Artsbestemmelse via Edge Function (nøglen aldrig i frontend)
 - [ ] Offline-kø: log fund uden dækning, synk senere
 - [ ] DMI Open Data ved siden af Open-Meteo
 
