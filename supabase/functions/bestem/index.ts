@@ -77,7 +77,12 @@ Deno.serve(async (req) => {
   try {
     const msg = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 1200,
+      // Rigeligt loft: Claude Opus 5 tænker som standard, og tænketokens
+      // deler budget med selve JSON-svaret. 1200 var for lavt og gav
+      // afkortet, ugyldig JSON — 'low' effort holder tænkningen kort,
+      // så loftet reelt går til svaret.
+      max_tokens: 4096,
+      output_config: { effort: 'low' },
       messages: [{
         role: 'user',
         content: [

@@ -56,7 +56,10 @@ Vinklen skal være vejret som forklaring på fundet — det er det, der gør his
     const anthropic = new Anthropic({ apiKey: key });
     const msg = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 500,
+      // Samme grund som i bestem/index.ts: tænketokens deler budget med
+      // svaret på Claude Opus 5, så loftet skal have luft ud over 500.
+      max_tokens: 1500,
+      output_config: { effort: 'low' },
       messages: [{ role: 'user', content: prompt }],
     });
     const text = msg.content
