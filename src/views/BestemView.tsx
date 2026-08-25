@@ -67,24 +67,28 @@ export function BestemView() {
     const w = weather[activeSpotId];
     if (!spot || !w) { showToast('Vejret er ikke hentet endnu'); return; }
     const r = read(w, SPECIES[0]); // snapshot-felterne er artsuafhængige
-    await addFind({
-      species: c.name_da,
-      speciesLat: c.name_lat,
-      habitat,
-      quantity: '1',
-      spotId: spot.id,
-      spotName: spot.name,
-      note: obs.trim(),
-      date: today.toISOString().slice(0, 10),
-      snapshot: { rain14: Math.round(r.rain14), daysSince: r.daysSince ?? 0, rh: Math.round(r.rh3), tmax: Math.round(r.tmax5) },
-      photos: shots.filter((s): s is Shot => Boolean(s)).map((s) => s.url),
-      source: 'ai',
-      confidence: c.confidence,
-    });
-    setShots([null, null, null]);
-    setObs('');
-    setResult({ kind: 'idle' });
-    goto('log');
+    try {
+      await addFind({
+        species: c.name_da,
+        speciesLat: c.name_lat,
+        habitat,
+        quantity: '1',
+        spotId: spot.id,
+        spotName: spot.name,
+        note: obs.trim(),
+        date: today.toISOString().slice(0, 10),
+        snapshot: { rain14: Math.round(r.rain14), daysSince: r.daysSince ?? 0, rh: Math.round(r.rh3), tmax: Math.round(r.tmax5) },
+        photos: shots.filter((s): s is Shot => Boolean(s)).map((s) => s.url),
+        source: 'ai',
+        confidence: c.confidence,
+      });
+      setShots([null, null, null]);
+      setObs('');
+      setResult({ kind: 'idle' });
+      goto('log');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Kunne ikke gemme fundet');
+    }
   };
 
   const filled = shots.filter(Boolean).length;
@@ -198,7 +202,10 @@ function IdResultPanel({ result, onPick }: { result: Result; onPick: (c: Candida
         <div className="qbar"><i style={{ background: qcol }} />{qtxt}{r.quality_note ? ` · ${r.quality_note}` : ''}</div>
         <div className="panel-label" style={{ marginBottom: 12 }}>Kandidater</div>
         {r.candidates.map((c, i) => {
-          const col = c.confidence >= 65 ? 'var(--lichen)' : c.confidence >= 40 ? 'var(--gold)' : 'var(--toxic)';
+          // --toxic er forbeholdt dødelige forvekslinger (CLAUDE.md) — lav
+          // konfidens betyder usikker gætning, ikke fare, og skal ikke se
+          // ud som en advarsel om en ellers uskyldig art.
+          const col = c.confidence >= 65 ? 'var(--lichen)' : c.confidence >= 40 ? 'var(--gold)' : 'var(--mute)';
           return (
             <div className={`cand${i === 0 ? ' top' : ''}`} key={i}>
               <div className="cand-head"><b>{c.name_da}</b><span className="pct" style={{ color: col }}>{c.confidence}%</span></div>

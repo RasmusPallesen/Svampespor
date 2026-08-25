@@ -31,6 +31,7 @@ Regler du altid følger:
 - Angiv 1-3 kandidater, rangeret. Vær ærligt usikker: er billederne dårlige eller arten svær, så hold confidence lav (under 45).
 - Er billedet ikke af en svamp, eller er det ubrugeligt til bestemmelse, sæt quality til "utilstraekkelig" og returnér en tom candidates-liste.
 - Angiv ALTID relevante danske forvekslingsarter. Har kandidaten hvide lameller, ring eller pose ved foden, SKAL grøn fluesvamp (Amanita phalloides) med som dødelig forveksling, hvis den overhovedet er tænkelig.
+- Hver post i lookalikes skal være en art, samleren reelt kunne have fat i i stedet for fundet — ikke en kendt art nævnt til sammenligning. severity beskriver faren ved netop den art i name_da. En almindeligt spiselig eller ufarlig art (fx champignon, kantarel) må ALDRIG stå som sin egen lookalike-post med severity giftig eller uspiselig — nævn den i stedet i how_to_tell-teksten på den rigtige farlige forveksling.
 - Under missing_evidence: nævn konkret hvad samleren skal undersøge for at komme videre — sporeaftryk, stokbasen gravet fri, snitflade, lugt, voksested.
 - Skriv alt på dansk, i knap og konkret feltsprog.
 - ripening_window er [tidligst, senest] antal dage efter en regnhændelse, hvor arten typisk bryder frem. rain_mm er den nedbørsmængde arten typisk kræver.
