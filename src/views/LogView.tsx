@@ -40,27 +40,31 @@ function LogForm() {
     const w = weather[activeSpotId];
     if (!spot || !w) { showToast('Vejret er ikke hentet endnu'); return; }
     const r = read(w, species);
-    await addFind({
-      species: species.nameDa,
-      speciesLat: species.nameLat,
-      habitat,
-      quantity: quantity || '1',
-      spotId: spot.id,
-      spotName: spot.name,
-      note: note.trim(),
-      date: today.toISOString().slice(0, 10),
-      snapshot: {
-        rain14: Math.round(r.rain14),
-        daysSince: r.daysSince ?? 0,
-        rh: Math.round(r.rh3),
-        tmax: Math.round(r.tmax5),
-      },
-      source: 'user',
-    });
-    setNote('');
-    setQuantity('6');
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1900);
+    try {
+      await addFind({
+        species: species.nameDa,
+        speciesLat: species.nameLat,
+        habitat,
+        quantity: quantity || '1',
+        spotId: spot.id,
+        spotName: spot.name,
+        note: note.trim(),
+        date: today.toISOString().slice(0, 10),
+        snapshot: {
+          rain14: Math.round(r.rain14),
+          daysSince: r.daysSince ?? 0,
+          rh: Math.round(r.rh3),
+          tmax: Math.round(r.tmax5),
+        },
+        source: 'user',
+      });
+      setNote('');
+      setQuantity('6');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1900);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Kunne ikke gemme fundet');
+    }
   };
 
   return (

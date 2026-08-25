@@ -21,18 +21,26 @@ export interface CatalogSpecies extends Species {
   warn: string;
 }
 
-/** Systemsteder — Nordsjælland og omegn. `travelMin` er rejsetid fra basen. */
+/**
+ * Systemsteder — Nordsjælland og omegn. `travelMin` er rejsetid fra basen.
+ *
+ * `id` er den samme UUID som rækken i `spots`-tabellen (source='system'),
+ * sat med faste literaler i supabase/migrations/0004_seed_system_data.sql
+ * — ikke gen_random_uuid() — netop så klient og database er enige om
+ * identiteten. `finds.spot_id` er en fremmednøgle til denne tabel, så et
+ * slug her ville brække enhver skrivning gennem Supabase-adapteren.
+ */
 export const SPOTS: Spot[] = [
-  { id: 'gribskov', name: 'Gribskov', region: 'Nordsjælland', lat: 55.978, lon: 12.294, travelMin: 55, habitats: ['bøg', 'gran', 'mos', 'gammelskov'] },
-  { id: 'tisvilde', name: 'Tisvilde Hegn', region: 'Nordkysten', lat: 56.048, lon: 12.092, travelMin: 65, habitats: ['fyr', 'mos', 'klit', 'sur'] },
-  { id: 'rude', name: 'Rude Skov', region: 'Holte', lat: 55.833, lon: 12.443, travelMin: 30, habitats: ['bøg', 'gran', 'løv'] },
-  { id: 'dyrehaven', name: 'Dyrehaven', region: 'Klampenborg', lat: 55.792, lon: 12.573, travelMin: 20, habitats: ['eg', 'bøg', 'græs', 'gammelskov'] },
-  { id: 'vestskoven', name: 'Vestskoven', region: 'Albertslund', lat: 55.684, lon: 12.341, travelMin: 25, habitats: ['løv', 'ungskov', 'lysning'] },
-  { id: 'hareskov', name: 'Hareskoven', region: 'Værløse', lat: 55.767, lon: 12.383, travelMin: 25, habitats: ['bøg', 'gran', 'løv'] },
-  { id: 'jaegersborg', name: 'Jægersborg Hegn', region: 'Skodsborg', lat: 55.812, lon: 12.552, travelMin: 24, habitats: ['bøg', 'eg', 'dødttræ'] },
-  { id: 'storedyre', name: 'Store Dyrehave', region: 'Hillerød', lat: 55.912, lon: 12.318, travelMin: 48, habitats: ['bøg', 'gran', 'mos'] },
-  { id: 'tokkekob', name: 'Tokkekøb Hegn', region: 'Allerød', lat: 55.887, lon: 12.394, travelMin: 42, habitats: ['gran', 'bøg', 'sur'] },
-  { id: 'boserup', name: 'Boserup Skov', region: 'Roskilde', lat: 55.652, lon: 12.024, travelMin: 45, habitats: ['bøg', 'løv', 'lysning'] },
+  { id: 'a45aa224-112b-45be-b611-0b0f52409517', name: 'Gribskov', region: 'Nordsjælland', lat: 55.978, lon: 12.294, travelMin: 55, habitats: ['bøg', 'gran', 'mos', 'gammelskov'] },
+  { id: '9149060e-a086-44fe-b829-4ab6e353ae1f', name: 'Tisvilde Hegn', region: 'Nordkysten', lat: 56.048, lon: 12.092, travelMin: 65, habitats: ['fyr', 'mos', 'klit', 'sur'] },
+  { id: 'b7c327c5-c0a1-4c96-8164-3bd97988ae4c', name: 'Rude Skov', region: 'Holte', lat: 55.833, lon: 12.443, travelMin: 30, habitats: ['bøg', 'gran', 'løv'] },
+  { id: '9b049416-0b36-4622-b087-5a65db7e80d0', name: 'Dyrehaven', region: 'Klampenborg', lat: 55.792, lon: 12.573, travelMin: 20, habitats: ['eg', 'bøg', 'græs', 'gammelskov'] },
+  { id: 'fc66ca9d-3142-4934-9044-9e4cf09e8880', name: 'Vestskoven', region: 'Albertslund', lat: 55.684, lon: 12.341, travelMin: 25, habitats: ['løv', 'ungskov', 'lysning'] },
+  { id: '4ba0bee5-69f1-4b01-a810-590e1840e5f7', name: 'Hareskoven', region: 'Værløse', lat: 55.767, lon: 12.383, travelMin: 25, habitats: ['bøg', 'gran', 'løv'] },
+  { id: '6c6fb8d0-4f0b-4dc3-9cad-4c0c1daf6888', name: 'Jægersborg Hegn', region: 'Skodsborg', lat: 55.812, lon: 12.552, travelMin: 24, habitats: ['bøg', 'eg', 'dødttræ'] },
+  { id: '4c3004fd-fe58-424c-883d-3f5412ec53ec', name: 'Store Dyrehave', region: 'Hillerød', lat: 55.912, lon: 12.318, travelMin: 48, habitats: ['bøg', 'gran', 'mos'] },
+  { id: 'c74f6597-fc37-47da-82ea-ff3928160be0', name: 'Tokkekøb Hegn', region: 'Allerød', lat: 55.887, lon: 12.394, travelMin: 42, habitats: ['gran', 'bøg', 'sur'] },
+  { id: 'bad68cfd-a072-408e-bb9d-ab786e8bddff', name: 'Boserup Skov', region: 'Roskilde', lat: 55.652, lon: 12.024, travelMin: 45, habitats: ['bøg', 'løv', 'lysning'] },
 ];
 
 /**

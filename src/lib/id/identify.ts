@@ -29,6 +29,10 @@ export async function identify(input: IdentifyInput): Promise<IdResult> {
   });
 
   if (error || !data) {
+    // Brugeren skal se en rolig, generisk besked (matcher prototypen) —
+    // men den reelle årsag logges, så en fejl ikke kræver en tur i
+    // Supabase-logs for at diagnosticere.
+    console.error('bestem-kald fejlede:', error);
     throw new IdUnavailableError('Der er ikke forbindelse til bestemmelsesmotoren lige nu.');
   }
   return data;
