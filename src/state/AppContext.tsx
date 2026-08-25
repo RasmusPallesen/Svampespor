@@ -22,10 +22,14 @@ import type { Relation } from '../lib/spots/ranking';
 export type Segment = 'idag' | 'mine';
 export type View = 'jagt' | 'bestem' | 'log' | 'faelles' | 'profil';
 
-const DEFAULT_RELATIONS: Record<string, Relation> = {
-  dyrehaven: 'pinned', gribskov: 'pinned',
-  rude: 'followed', tisvilde: 'followed', vestskoven: 'followed',
-};
+/** Navnene er kun til at slå id'et op i SPOTS — id'erne selv er ægte UUID'er. */
+const DEFAULT_RELATION_NAMES: [string, Relation][] = [
+  ['Dyrehaven', 'pinned'], ['Gribskov', 'pinned'],
+  ['Rude Skov', 'followed'], ['Tisvilde Hegn', 'followed'], ['Vestskoven', 'followed'],
+];
+const DEFAULT_RELATIONS: Record<string, Relation> = Object.fromEntries(
+  DEFAULT_RELATION_NAMES.map(([name, rel]) => [SPOTS.find((s) => s.name === name)?.id ?? name, rel]),
+);
 
 interface AppState {
   repoPersistent: boolean;

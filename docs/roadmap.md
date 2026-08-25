@@ -8,8 +8,9 @@
 - [x] Regnstriben som React-komponent
 - [x] Feltdagbog: opret og læs fund med vejrsnapshot (datalag med session- + Supabase-adapter)
 - [x] Artsbestemmelse i UI + Edge Function `bestem` (nøglen serverside)
-- [ ] Supabase-projekt oprettet, migration kørt (Edge Functions udrullet)
-- [ ] Auth (Apple/Google) + profiler mod `profiles`-tabellen
+- [x] Supabase-projekt oprettet (`svampespor`, eu-central-1), migrationer kørt, systemsteder + arter seedet med faste UUID'er
+- [x] Edge Functions `bestem` og `billedtekst` udrullet — mangler kun `ANTHROPIC_API_KEY` som secret for at være aktive
+- [ ] Auth (Apple/Google) + profiler mod `profiles`-tabellen — **uden dette virker "Log et fund" ikke i Supabase-tilstand** (RLS kræver `auth.uid()`)
 - [ ] Rediger og slet fund
 
 ## Fase 2 — felten
