@@ -6,6 +6,7 @@ import { shrink } from '../lib/id/shrink';
 import type { Candidate, IdResult, Shot } from '../lib/id/types';
 import { read } from '../lib/weather/model';
 import { useApp } from '../state/AppContext';
+import { useCaptureLocation } from '../state/useCaptureLocation';
 
 type Result =
   | { kind: 'idle' }
@@ -18,6 +19,7 @@ const sevClass = (s: string) => (s === 'doedelig' ? 'dodelig' : s === 'giftig' ?
 
 export function BestemView() {
   const { weather, activeSpotId, addFind, today, goto, showToast } = useApp();
+  const captureLocation = useCaptureLocation();
   const [shots, setShots] = useState<(Shot | null)[]>([null, null, null]);
   const [habitat, setHabitat] = useState(HABITATS[0]);
   const [obs, setObs] = useState('');
@@ -67,6 +69,7 @@ export function BestemView() {
     const w = weather[activeSpotId];
     if (!spot || !w) { showToast('Vejret er ikke hentet endnu'); return; }
     const r = read(w, SPECIES[0]); // snapshot-felterne er artsuafhængige
+    const geo = await captureLocation();
     try {
       await addFind({
         species: c.name_da,
@@ -81,6 +84,7 @@ export function BestemView() {
         photos: shots.filter((s): s is Shot => Boolean(s)).map((s) => s.url),
         source: 'ai',
         confidence: c.confidence,
+        geo,
       });
       setShots([null, null, null]);
       setObs('');

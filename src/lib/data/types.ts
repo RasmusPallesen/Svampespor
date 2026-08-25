@@ -6,6 +6,8 @@
  * findetidspunktet: det er dét, der gør datasættet værdifuldt over år.
  */
 
+import type { GeoPoint } from '../geo/geolocation';
+
 export type IdSource = 'user' | 'ai' | 'community';
 
 /** Vejret som det så ud, da fundet blev gjort. Fryses fast, opdateres aldrig. */
@@ -38,6 +40,13 @@ export interface FindRecord {
   /** AI-sikkerhedsgrad 0-100, kun når source === 'ai' */
   confidence?: number;
   shared: boolean;
+  /**
+   * Præcis position, kun sat når brugeren eksplicit slog positionslogning
+   * til (CLAUDE.md regel 3). Vises kun for ejeren — RLS'et `finds`-tabel
+   * afleder automatisk en sløret ~1-2 km version til fællesskabslaget,
+   * aldrig denne selv.
+   */
+  geo?: GeoPoint | null;
 }
 
 /** Det, der skal til for at oprette et fund — resten udfylder datalaget. */
@@ -54,6 +63,7 @@ export interface FindInput {
   photos?: string[];
   source: IdSource;
   confidence?: number;
+  geo?: GeoPoint | null;
 }
 
 export interface ProfilePrefs {

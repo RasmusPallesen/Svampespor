@@ -4,6 +4,7 @@ import { HABITATS, SPECIES, findSpot } from '../data/catalog';
 import { fmtLongDate } from '../lib/format';
 import { read } from '../lib/weather/model';
 import { useApp } from '../state/AppContext';
+import { useCaptureLocation } from '../state/useCaptureLocation';
 import type { FindRecord } from '../lib/data/types';
 
 export function LogView() {
@@ -25,7 +26,8 @@ export function LogView() {
 /* ------------------------------------------------------------------ */
 
 function LogForm() {
-  const { weather, activeSpotId, addFind, today, showToast } = useApp();
+  const { weather, activeSpotId, addFind, today, showToast, logLocation, setLogLocation } = useApp();
+  const captureLocation = useCaptureLocation();
   const [speciesName, setSpeciesName] = useState(SPECIES[0].nameDa);
   const [habitat, setHabitat] = useState(HABITATS[0]);
   const [quantity, setQuantity] = useState('6');
@@ -40,6 +42,7 @@ function LogForm() {
     const w = weather[activeSpotId];
     if (!spot || !w) { showToast('Vejret er ikke hentet endnu'); return; }
     const r = read(w, species);
+    const geo = await captureLocation();
     try {
       await addFind({
         species: species.nameDa,
@@ -57,6 +60,7 @@ function LogForm() {
           tmax: Math.round(r.tmax5),
         },
         source: 'user',
+        geo,
       });
       setNote('');
       setQuantity('6');
@@ -95,6 +99,14 @@ function LogForm() {
       <div className="field">
         <label htmlFor="fNote">Feltnote</label>
         <textarea id="fNote" placeholder="Lugt, lameller, substrat, hvordan lyset faldt…" value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+      <div className="pref" style={{ marginBottom: 14 }}>
+        <div>
+          <b>Log nøjagtig position</b>
+          <p>Din præcise placering gemmes med fundet — kun du kan se den. Kræver din tilladelse i browseren.</p>
+        </div>
+        <button className="switch" role="switch" aria-checked={logLocation} aria-label="Log nøjagtig position"
+          onClick={() => setLogLocation(!logLocation)} />
       </div>
       <button className="btn" onClick={save} style={saved ? { background: 'var(--gold)' } : undefined}>
         {saved ? 'Gemt — vejret fulgte med' : 'Gem fund med vejrsnapshot'}
@@ -162,6 +174,12 @@ function FindCard({ find: f }: { find: FindRecord }) {
         </div>
       )}
       <div className="find-meta">{f.quantity} stk · {f.habitat} · {f.spotName}</div>
+      {f.geo && (
+        <div className="find-geo">
+          <span>📍 {f.geo.lat.toFixed(5)}, {f.geo.lon.toFixed(5)}</span>
+          <a href={`https://www.google.com/maps?q=${f.geo.lat},${f.geo.lon}`} target="_blank" rel="noreferrer">Åbn i kort</a>
+        </div>
+      )}
       {f.note && <div className="find-note">"{f.note}"</div>}
       <div className="snap">
         <div><b>{f.snapshot.rain14} mm</b><span>14 d før</span></div>

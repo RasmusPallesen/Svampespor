@@ -82,6 +82,10 @@ interface AppState {
   sharing: boolean;
   setSharing(v: boolean): void;
 
+  /** Eksplicit samtykke til at logge præcis position ved fund (CLAUDE.md regel 3). */
+  logLocation: boolean;
+  setLogLocation(v: boolean): void;
+
   view: View;
   goto(v: View): void;
 
@@ -120,6 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [segment, setSegment] = useState<Segment>('idag');
   const [showHidden, setShowHidden] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [logLocation, setLogLocation] = useState(false);
   const [view, setView] = useState<View>('jagt');
   const [shareFind, setShareFind] = useState<FindRecord | null>(null);
 
@@ -312,6 +317,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     relations, cycleRelation,
     segment, setSegment, showHidden, toggleHidden: () => setShowHidden((v) => !v),
     sharing, setSharing,
+    logLocation, setLogLocation,
     view, goto,
     shareFind, openShare, closeShare,
     toast, showToast,

@@ -11,10 +11,11 @@
 - [x] Supabase-projekt oprettet (`svampespor`, eu-central-1), migrationer kørt, systemsteder + arter seedet med faste UUID'er
 - [x] Edge Functions `bestem` og `billedtekst` udrullet — mangler kun `ANTHROPIC_API_KEY` som secret for at være aktive
 - [x] Auth-kode klar: Google, Apple og e-mail magic-link (`src/lib/auth/`), profiler kobles til `auth.uid()` — Google/Apple skal aktiveres i Supabase Dashboard af projektejeren, se README → Auth
+- [x] Nøjagtig positionslogning ved fund — opt-in switch, `finds.geom` + genererede `lat`/`lon`-kolonner, blurres automatisk til fællesskabslaget (regel 3)
 - [ ] Rediger og slet fund
 
 ## Fase 2 — felten
-- [ ] Kort med steder og egne nåle (MapLibre + PostGIS)
+- [ ] Kort med steder og egne nåle (MapLibre + PostGIS) — positionsdata findes nu på fund, mangler kortvisning
 - [ ] Hemmelige nåle med klientside-kryptering
 - [ ] Billedupload til Supabase Storage, tre slots (i dag: data-URL'er i session)
 - [x] Artsbestemmelse via Edge Function (nøglen aldrig i frontend)

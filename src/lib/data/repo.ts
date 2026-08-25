@@ -83,7 +83,7 @@ class SupabaseRepo implements Repo {
   async listFinds(): Promise<FindRecord[]> {
     const { data, error } = await this.db
       .from('finds')
-      .select('id, species_text, habitat, quantity, spot_id, found_at, note, weather, id_source, id_confidence, shared')
+      .select('id, species_text, habitat, quantity, spot_id, found_at, note, weather, id_source, id_confidence, shared, lat, lon')
       .order('found_at', { ascending: false });
     if (error) throw error;
     return (data ?? []).map((r): FindRecord => ({
@@ -99,6 +99,7 @@ class SupabaseRepo implements Repo {
       source: r.id_source,
       confidence: r.id_confidence ?? undefined,
       shared: r.shared,
+      geo: r.lat != null && r.lon != null ? { lat: r.lat, lon: r.lon } : null,
     }));
   }
 
@@ -119,6 +120,8 @@ class SupabaseRepo implements Repo {
         id_source: input.source,
         id_confidence: input.confidence ?? null,
         shared: false,
+        // WKT — Postgres' geography_in() accepter et rent tekstpunkt.
+        geom: input.geo ? `POINT(${input.geo.lon} ${input.geo.lat})` : null,
       })
       .select('id')
       .single();
