@@ -37,10 +37,34 @@ npm run db:types          # genererer src/types/database.ts
 src/lib/weather/model.ts     modningsindeks + prognoseusikkerhed  (ren, testet)
 src/lib/weather/openMeteo.ts vejr-I/O med 2 km gittersnapping
 src/lib/spots/ranking.ts     rangering af steder                  (ren, testet)
+src/lib/data/                datalag: repo-interface + session- og Supabase-adapter
+src/lib/id/                  artsbestemmelse: kald til Edge Function + billedskalering
+src/lib/share/              delekort (canvas) + billedtekst
+src/data/catalog.ts          systemsteder + arter (klientens spejl af databasen)
+src/state/AppContext.tsx     appens tilstand ét sted
+src/components/, src/views/  React-UI, bygget efter prototypen
+supabase/functions/bestem/   Edge Function: artsbestemmelse (Anthropic-nøgle serverside)
+supabase/functions/billedtekst/  Edge Function: billedtekst til deling
 supabase/migrations/         skema, RLS, sløringstrigger
 docs/model.md                hvorfor modellen ser sådan ud
 docs/roadmap.md              hvad der mangler
 docs/prototype.html          enkeltfil-demo af hele flowet (reference, ikke kodebase)
+```
+
+Appen kører fuldt ud uden backend: mangler Supabase-nøglerne, henter den stadig live
+vejr fra Open-Meteo, holder fund i en session-adapter (aldrig localStorage) og viser
+en pæn fejl, hvis bestemmelsesmotoren ikke er udrullet. Sæt `.env` op for at koble
+fund, profil og artsbestemmelse på Supabase.
+
+### Edge Functions
+
+Artsbestemmelse og billedtekst går gennem Supabase Edge Functions, så Anthropic-nøglen
+aldrig rammer frontend-bundlen (se `CLAUDE.md`, regel 1).
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase functions deploy bestem
+supabase functions deploy billedtekst
 ```
 
 Al domænelogik i `src/lib/` er ren og testbar — ingen DOM, ingen fetch. Det er bevidst:
