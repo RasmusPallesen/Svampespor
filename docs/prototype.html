@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Svampespor — prototype</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600&display=swap');
+
+:root{
+  --loam:#14170F;
+  --humus:#1C2116;
+  --raised:#242B1D;
+  --bark:#333C29;
+  --lichen:#9FB58C;
+  --paper:#EAE7DA;
+  --mute:#7C8A6E;
+  --rain:#6DA9C9;
+  --rain-deep:#3E7characters;
+  --rain-deep:#3E7A96;
+  --gold:#E3A73C;
+  --toxic:#D2543C;
+
+  --display:'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --body:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--loam);color:var(--paper);font-family:var(--body);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;line-height:1.5}
+
+.app{max-width:520px;margin:0 auto;padding:0 0 40px;position:relative}
+
+/* ambient forest-floor texture */
+.app::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(109,169,201,.10), transparent 60%),
+    radial-gradient(80% 50% at 90% 100%, rgba(227,167,60,.05), transparent 70%);
+}
+.app > *{position:relative;z-index:1}
+
+/* ---------- header ---------- */
+header{padding:26px 20px 14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.brand{font-family:var(--display);font-weight:500;font-size:25px;letter-spacing:-.02em;line-height:1}
+.brand em{font-style:italic;color:var(--lichen)}
+.tagline{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);margin-top:6px}
+.src-badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--bark);color:var(--mute);padding:4px 8px;border-radius:99px;white-space:nowrap}
+.src-badge.live{border-color:rgba(109,169,201,.5);color:var(--rain)}
+
+/* ---------- spot selector ---------- */
+.spots{display:flex;gap:8px;overflow-x:auto;padding:6px 20px 16px;scrollbar-width:none}
+.spots::-webkit-scrollbar{display:none}
+.spot-chip{flex:0 0 auto;background:var(--humus);border:1px solid var(--bark);color:var(--lichen);
+  font-family:var(--body);font-size:13px;font-weight:500;padding:8px 14px;border-radius:99px;cursor:pointer;
+  transition:border-color .18s, color .18s, background .18s}
+.spot-chip:hover{border-color:var(--lichen)}
+.spot-chip[aria-pressed="true"]{background:var(--raised);border-color:var(--lichen);color:var(--paper)}
+.spot-chip .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:7px;vertical-align:middle;background:var(--mute)}
+
+/* ---------- panels ---------- */
+.panel{background:var(--humus);border:1px solid var(--bark);border-radius:14px;margin:0 16px 14px;padding:18px}
+.panel-label{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+
+/* ---------- index readout ---------- */
+.readout{display:flex;align-items:center;gap:18px}
+.dial{position:relative;flex:0 0 96px;height:96px}
+.dial svg{transform:rotate(-90deg)}
+.dial-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dial-num b{font-family:var(--display);font-size:30px;font-weight:500;line-height:1;letter-spacing:-.02em}
+.dial-num span{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--mute);margin-top:3px}
+.verdict h2{font-family:var(--display);font-size:20px;font-weight:500;line-height:1.2;letter-spacing:-.01em;margin-bottom:7px}
+.verdict p{font-size:13.5px;color:var(--lichen);line-height:1.5}
+.verdict p b{color:var(--paper);font-weight:600}
+
+/* ---------- rain strip (signature) ---------- */
+.strip-wrap{position:relative;margin-top:2px}
+.strip{position:relative;height:118px;display:flex;align-items:flex-end;gap:2px}
+.ripen-band{position:absolute;top:0;bottom:22px;border-radius:5px;
+  background:linear-gradient(180deg, rgba(227,167,60,.20), rgba(227,167,60,.05));
+  border-left:1px solid rgba(227,167,60,.4);border-right:1px solid rgba(227,167,60,.4);
+  pointer-events:none}
+.ripen-tag{position:absolute;top:-1px;left:0;transform:translateY(-100%);
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);white-space:nowrap}
+.bar-col{flex:1 1 0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;position:relative;cursor:default}
+.bar{width:100%;max-width:13px;border-radius:2px 2px 0 0;background:var(--rain-deep);min-height:2px;transition:height .5s cubic-bezier(.2,.7,.3,1)}
+.bar.fc{background:transparent;border:1px dashed rgba(109,169,201,.55);border-bottom:none}
+.bar.big{background:var(--rain)}
+.bar-lbl{font-family:var(--mono);font-size:8px;color:var(--mute);height:12px;line-height:12px}
+.bar-col.today .bar-lbl{color:var(--gold);font-weight:600}
+.bar-col.today::after{content:'';position:absolute;top:0;bottom:16px;width:1px;background:rgba(227,167,60,.55)}
+.bar-col:hover .bar{filter:brightness(1.35)}
+.tip{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  background:var(--raised);border:1px solid var(--bark);border-radius:6px;padding:5px 8px;
+  font-family:var(--mono);font-size:10px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;z-index:5}
+.bar-col:hover .tip{opacity:1}
+.strip-legend{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--mute)}
+.leg i{width:10px;height:10px;border-radius:2px;display:block}
+
+/* ---------- metrics ---------- */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bark);
+  border:1px solid var(--bark);border-radius:10px;overflow:hidden;margin-top:16px}
+.metric{background:var(--humus);padding:11px 8px;text-align:center}
+.metric b{display:block;font-family:var(--mono);font-size:15px;font-weight:500;color:var(--paper)}
+.metric span{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-top:4px}
+.metric b.rain-c{color:var(--rain)}
+.metric b.gold-c{color:var(--gold)}
+
+/* ---------- best day ---------- */
+.bestday{display:flex;align-items:center;gap:12px;background:var(--raised);border:1px solid var(--bark);
+  border-radius:10px;padding:13px 15px;margin-top:14px}
+.bestday .num{font-family:var(--display);font-size:23px;font-weight:500;color:var(--gold);line-height:1}
+.bestday .txt{font-size:13px;color:var(--lichen)}
+.bestday .txt b{color:var(--paper);font-weight:600;display:block;font-size:13.5px;margin-bottom:2px}
+
+/* ---------- spot list ---------- */
+.spot-row{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid var(--bark);cursor:pointer}
+.spot-row:last-child{border-bottom:none;padding-bottom:0}
+.spot-row:first-of-type{padding-top:0}
+.mini-dial{flex:0 0 38px;height:38px;position:relative}
+.mini-dial span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;font-weight:600}
+.spot-info{flex:1;min-width:0}
+.spot-info b{display:block;font-size:14px;font-weight:600}
+.spot-info span{font-family:var(--mono);font-size:10px;color:var(--mute);letter-spacing:.04em}
+.spot-state{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 9px;border-radius:99px;border:1px solid var(--bark);color:var(--mute);white-space:nowrap}
+.spot-state.open{color:var(--gold);border-color:rgba(227,167,60,.45)}
+.spot-state.soon{color:var(--rain);border-color:rgba(109,169,201,.4)}
+
+/* ---------- form ---------- */
+label{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+select,input[type=text],textarea{width:100%;background:var(--loam);border:1px solid var(--bark);color:var(--paper);
+  font-family:var(--body);font-size:14px;padding:10px 12px;border-radius:8px;outline:none;transition:border-color .18s}
+select:focus,input:focus,textarea:focus,button:focus-visible,.spot-chip:focus-visible{border-color:var(--lichen);outline:2px solid rgba(159,181,140,.35);outline-offset:1px}
+textarea{resize:vertical;min-height:66px;font-size:13.5px}
+.field{margin-bottom:14px}
+.field-row{display:grid;grid-template-columns:1fr 88px;gap:10px}
+.btn{width:100%;background:var(--lichen);color:var(--loam);border:none;font-family:var(--body);font-weight:600;
+  font-size:14px;padding:13px;border-radius:8px;cursor:pointer;transition:filter .18s}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:transparent;border:1px solid var(--bark);color:var(--lichen)}
+
+/* ---------- warning ---------- */
+.warn{display:flex;gap:10px;background:rgba(210,84,60,.09);border:1px solid rgba(210,84,60,.35);
+  border-radius:9px;padding:11px 13px;margin-bottom:14px;font-size:12.5px;line-height:1.45}
+.warn .ic{flex:0 0 auto;color:var(--toxic);font-family:var(--mono);font-weight:600;font-size:13px}
+.warn b{color:var(--toxic)}
+.warn.safe{background:rgba(159,181,140,.07);border-color:rgba(159,181,140,.3)}
+.warn.safe .ic,.warn.safe b{color:var(--lichen)}
+
+/* ---------- find cards ---------- */
+.find{border:1px solid var(--bark);border-radius:12px;padding:14px;margin-bottom:11px;background:var(--humus)}
+.find-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px}
+.find-top b{font-family:var(--display);font-size:16.5px;font-weight:500;letter-spacing:-.01em}
+.find-top time{font-family:var(--mono);font-size:10px;color:var(--mute);white-space:nowrap}
+.find-meta{font-size:12.5px;color:var(--lichen);margin-bottom:11px}
+.find-note{font-size:12.5px;color:var(--mute);font-style:italic;margin-bottom:11px}
+.snap{display:flex;gap:0;background:var(--loam);border:1px solid var(--bark);border-radius:8px;overflow:hidden}
+.snap div{flex:1;padding:8px 6px;text-align:center;border-right:1px solid var(--bark)}
+.snap div:last-child{border-right:none}
+.snap b{display:block;font-family:var(--mono);font-size:12px;color:var(--rain)}
+.snap span{display:block;font-family:var(--mono);font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-top:3px}
+
+/* ---------- pattern insight ---------- */
+.insight{background:linear-gradient(160deg, rgba(227,167,60,.10), rgba(227,167,60,.02));
+  border:1px solid rgba(227,167,60,.28);border-radius:12px;padding:16px;margin:0 16px 14px}
+.insight .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:9px}
+.insight p{font-size:14px;line-height:1.55;color:var(--paper)}
+.insight p b{color:var(--gold);font-weight:600}
+.insight small{display:block;font-family:var(--mono);font-size:10px;color:var(--mute);margin-top:9px}
+
+/* ---------- community ---------- */
+.share-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.share-toggle p{font-size:12.5px;color:var(--mute);margin-top:5px;line-height:1.45}
+.switch{flex:0 0 46px;height:26px;border-radius:99px;background:var(--bark);border:none;position:relative;cursor:pointer;transition:background .2s}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--mute);transition:transform .2s, background .2s}
+.switch[aria-checked="true"]{background:rgba(159,181,140,.35)}
+.switch[aria-checked="true"]::after{transform:translateX(20px);background:var(--lichen)}
+.feed-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--bark)}
+.feed-item:last-child{border-bottom:none}
+.av{flex:0 0 36px;height:36px;border-radius:50%;background:var(--raised);border:1px solid var(--bark);
+  display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:15px;color:var(--lichen)}
+.feed-body{flex:1;min-width:0}
+.feed-head{font-size:13px;margin-bottom:4px}
+.feed-head b{font-weight:600}
+.feed-head span{color:var(--mute)}
+.feed-find{font-family:var(--display);font-size:15px;font-weight:500;margin-bottom:4px}
+.feed-loc{font-family:var(--mono);font-size:10px;color:var(--mute);letter-spacing:.04em}
+.feed-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--bark);color:var(--mute);padding:3px 7px;border-radius:99px}
+.tag.ver{color:var(--lichen);border-color:rgba(159,181,140,.4)}
+.tag.pend{color:var(--gold);border-color:rgba(227,167,60,.35)}
+
+/* ---------- photo upload ---------- */
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.shot{position:relative;aspect-ratio:3/4;border:1px dashed var(--bark);border-radius:10px;background:var(--loam);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;
+  transition:border-color .18s, background .18s;overflow:hidden;text-align:center;padding:8px}
+.shot:hover{border-color:var(--lichen)}
+.shot.filled{border-style:solid;border-color:var(--bark)}
+.shot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.shot .glyph{font-family:var(--mono);font-size:17px;color:var(--mute)}
+.shot .cap{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);line-height:1.4}
+.shot .req{position:absolute;bottom:0;left:0;right:0;background:rgba(20,23,15,.88);color:var(--lichen);
+  font-family:var(--mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:4px 2px;z-index:2}
+.shot .x{position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:rgba(20,23,15,.85);
+  border:1px solid var(--bark);color:var(--paper);font-size:12px;line-height:18px;z-index:3;cursor:pointer}
+.shot-hint{font-size:12px;color:var(--mute);line-height:1.5;margin-bottom:14px}
+.shot-hint b{color:var(--lichen);font-weight:600}
+
+/* ---------- analysis ---------- */
+.analysing{text-align:center;padding:28px 16px}
+.analysing .spore{width:34px;height:34px;margin:0 auto 14px;border-radius:50%;
+  border:2px solid var(--bark);border-top-color:var(--lichen);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.analysing p{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+
+.qbar{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--mute);padding:9px 12px;border:1px solid var(--bark);border-radius:8px;margin-bottom:14px}
+.qbar i{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+
+.cand{border:1px solid var(--bark);border-radius:11px;padding:14px;margin-bottom:10px;background:var(--loam)}
+.cand.top{border-color:rgba(159,181,140,.45);background:var(--raised)}
+.cand-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:3px}
+.cand-head b{font-family:var(--display);font-size:17px;font-weight:500;letter-spacing:-.01em}
+.cand-head .pct{font-family:var(--mono);font-size:14px;font-weight:600;white-space:nowrap}
+.cand .lat{font-family:var(--mono);font-size:10.5px;color:var(--mute);font-style:italic;margin-bottom:9px}
+.conf{height:3px;border-radius:2px;background:var(--bark);overflow:hidden;margin-bottom:11px}
+.conf i{display:block;height:100%;border-radius:2px;transition:width .6s cubic-bezier(.2,.7,.3,1)}
+.cand p{font-size:12.5px;line-height:1.5;color:var(--lichen);margin-bottom:9px}
+.feats{display:flex;flex-direction:column;gap:5px}
+.feat{display:flex;gap:8px;font-size:12px;color:var(--mute);line-height:1.45}
+.feat::before{content:'—';color:var(--bark);flex:0 0 auto}
+.cand-pick{width:100%;margin-top:11px;background:transparent;border:1px solid var(--bark);color:var(--lichen);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:9px;border-radius:7px;cursor:pointer;transition:border-color .18s,color .18s}
+.cand-pick:hover{border-color:var(--lichen);color:var(--paper)}
+
+.look{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--bark)}
+.look:last-child{border-bottom:none;padding-bottom:0}
+.look-sev{flex:0 0 auto;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 8px;border-radius:99px;border:1px solid;height:fit-content;margin-top:2px}
+.sev-dodelig{color:var(--toxic);border-color:rgba(210,84,60,.55);background:rgba(210,84,60,.1)}
+.sev-giftig{color:var(--gold);border-color:rgba(227,167,60,.45)}
+.sev-uspiselig{color:var(--mute);border-color:var(--bark)}
+.look-body b{display:block;font-size:13.5px;font-weight:600;margin-bottom:2px}
+.look-body i{display:block;font-family:var(--mono);font-size:10px;color:var(--mute);font-style:normal;margin-bottom:6px}
+.look-body p{font-size:12.5px;color:var(--lichen);line-height:1.5}
+
+.missing li{list-style:none;font-size:12.5px;color:var(--lichen);line-height:1.5;padding:7px 0 7px 20px;position:relative;border-bottom:1px solid var(--bark)}
+.missing li:last-child{border-bottom:none}
+.missing li::before{content:'○';position:absolute;left:0;color:var(--rain);font-size:11px}
+
+.creed{background:rgba(210,84,60,.07);border:1px solid rgba(210,84,60,.3);border-radius:11px;padding:15px;margin:0 16px 14px}
+.creed .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--toxic);margin-bottom:8px}
+.creed p{font-size:13px;line-height:1.55;color:var(--paper)}
+.creed p b{color:var(--toxic)}
+
+.find-shots{display:flex;gap:6px;margin-bottom:11px}
+.find-shots img{width:52px;height:52px;object-fit:cover;border-radius:7px;border:1px solid var(--bark)}
+.src-tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--bark);color:var(--mute);padding:2px 7px;border-radius:99px;margin-left:8px;white-space:nowrap}
+.src-tag.ai{color:var(--rain);border-color:rgba(109,169,201,.4)}
+
+.spot-passive{display:none;align-items:center;gap:8px;margin:0 16px 14px;padding:9px 13px;
+  background:var(--humus);border:1px solid var(--bark);border-radius:9px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.spot-passive b{color:var(--lichen);font-weight:500;letter-spacing:.08em}
+.spot-passive .pin{width:5px;height:5px;border-radius:50%;background:var(--gold);flex:0 0 auto}
+.spot-passive .swap{margin-left:auto;background:none;border:none;color:var(--mute);cursor:pointer;
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  border-bottom:1px solid var(--bark);padding:0 0 1px;transition:color .18s,border-color .18s}
+.spot-passive .swap:hover{color:var(--lichen);border-color:var(--lichen)}
+
+/* ---------- profil ---------- */
+.head-right{display:flex;align-items:center;gap:10px}
+.avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--raised);border:1px solid var(--bark);
+  color:var(--lichen);font-family:var(--display);font-size:15px;cursor:pointer;transition:border-color .18s}
+.avatar-btn:hover{border-color:var(--lichen)}
+.avatar-btn.out{color:var(--mute);font-family:var(--mono);font-size:15px}
+
+.prof-head{display:flex;align-items:center;gap:15px;margin-bottom:16px}
+.prof-av{flex:0 0 58px;height:58px;border-radius:50%;background:var(--raised);border:1px solid var(--bark);
+  display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;color:var(--lichen)}
+.prof-name b{display:block;font-family:var(--display);font-size:20px;font-weight:500;letter-spacing:-.01em}
+.prof-name span{font-family:var(--mono);font-size:10px;color:var(--mute);letter-spacing:.06em}
+.prof-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bark);
+  border:1px solid var(--bark);border-radius:10px;overflow:hidden}
+.prof-stats div{background:var(--humus);padding:12px 6px;text-align:center}
+.prof-stats b{display:block;font-family:var(--display);font-size:21px;font-weight:500;color:var(--gold)}
+.prof-stats span{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-top:3px}
+
+.handle-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--bark)}
+.handle-row:last-of-type{border-bottom:none}
+.hicon{flex:0 0 32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:12px;font-weight:600;border:1px solid var(--bark);background:var(--loam)}
+.handle-row .hin{flex:1;background:var(--loam);border:1px solid var(--bark);color:var(--paper);
+  font-family:var(--mono);font-size:12.5px;padding:9px 11px;border-radius:7px;outline:none;min-width:0}
+.handle-row .hin:focus{border-color:var(--lichen)}
+.hname{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);
+  flex:0 0 62px}
+
+.pref{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--bark)}
+.pref:last-child{border-bottom:none}
+.pref b{display:block;font-size:13.5px;font-weight:600;margin-bottom:3px}
+.pref p{font-size:12px;color:var(--mute);line-height:1.45}
+
+/* ---------- del ---------- */
+.find-foot{display:flex;gap:8px;margin-top:11px}
+.share-btn{flex:1;background:transparent;border:1px solid var(--bark);color:var(--lichen);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:9px;border-radius:7px;cursor:pointer;transition:border-color .18s,color .18s}
+.share-btn:hover{border-color:var(--lichen);color:var(--paper)}
+
+.sheet{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(8,10,6,.72);backdrop-filter:blur(4px)}
+.sheet.on{display:flex;animation:fade .2s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.sheet-in{width:100%;max-width:520px;max-height:92vh;overflow-y:auto;background:var(--humus);
+  border:1px solid var(--bark);border-radius:16px 16px 0 0;padding:18px 18px 26px;animation:up .28s cubic-bezier(.2,.7,.3,1)}
+@keyframes up{from{transform:translateY(30px)}to{transform:none}}
+.sheet-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.sheet-top b{font-family:var(--display);font-size:18px;font-weight:500}
+.sheet-top button{background:none;border:none;color:var(--mute);font-size:20px;cursor:pointer;line-height:1}
+
+.card-prev{width:100%;border-radius:11px;border:1px solid var(--bark);display:block;margin-bottom:15px;background:var(--loam)}
+
+.plats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:15px}
+.plat{background:var(--loam);border:1px solid var(--bark);border-radius:10px;padding:12px 4px;cursor:pointer;
+  transition:border-color .18s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.plat:hover{border-color:var(--lichen)}
+.plat:disabled{opacity:.35;cursor:not-allowed}
+.plat .pi{font-family:var(--mono);font-size:13px;font-weight:600}
+.plat .pn{font-family:var(--mono);font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+
+.cap-box{background:var(--loam);border:1px solid var(--bark);border-radius:10px;padding:13px;margin-bottom:12px}
+.cap-box .ct{font-size:13px;line-height:1.55;color:var(--paper);white-space:pre-wrap;min-height:60px}
+.cap-box .cm{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-top:10px;display:flex;justify-content:space-between}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--raised);
+  border:1px solid var(--lichen);color:var(--paper);font-size:13px;padding:11px 18px;border-radius:99px;z-index:80;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.toast.on{opacity:1}
+
+/* ---------- segmenteret valg ---------- */
+.seg{display:flex;gap:0;background:var(--loam);border:1px solid var(--bark);border-radius:9px;
+  padding:3px;margin:0 16px 14px}
+.seg button{flex:1;background:none;border:none;color:var(--mute);cursor:pointer;padding:9px 6px;border-radius:7px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;transition:background .18s,color .18s}
+.seg button[aria-pressed="true"]{background:var(--raised);color:var(--paper)}
+
+.hunt{display:flex;align-items:center;gap:10px;margin:0 16px 14px;padding:11px 13px;
+  background:var(--humus);border:1px solid var(--bark);border-radius:9px}
+.hunt label{margin:0;flex:0 0 auto}
+.hunt select{background:var(--loam);border:1px solid var(--bark);color:var(--paper);
+  font-family:var(--body);font-size:13px;padding:7px 10px;border-radius:7px;flex:1;min-width:0}
+
+/* ---------- rangerede steder ---------- */
+.rank{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--bark)}
+.rank:last-child{border-bottom:none;padding-bottom:0}
+.rank:first-child{padding-top:0}
+.rank-n{flex:0 0 26px;font-family:var(--mono);font-size:11px;color:var(--mute);padding-top:11px;text-align:center}
+.rank-n.top{color:var(--gold);font-weight:600}
+.rank-body{flex:1;min-width:0;cursor:pointer}
+.rank-title{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.rank-title b{font-size:14.5px;font-weight:600}
+.rank-title .sc{font-family:var(--mono);font-size:12px;font-weight:600;margin-left:auto}
+.rank-sub{font-family:var(--mono);font-size:9.5px;color:var(--mute);letter-spacing:.04em;margin-bottom:7px}
+.whys{display:flex;gap:5px;flex-wrap:wrap}
+.why{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid var(--bark);color:var(--mute);padding:3px 7px;border-radius:99px;white-space:nowrap}
+.why.good{color:var(--gold);border-color:rgba(227,167,60,.4)}
+.why.hist{color:var(--lichen);border-color:rgba(159,181,140,.35)}
+.why.bad{color:var(--toxic);border-color:rgba(210,84,60,.35)}
+.rank-acts{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;padding-top:2px}
+.pinbtn{width:30px;height:30px;border-radius:8px;background:var(--loam);border:1px solid var(--bark);
+  color:var(--mute);cursor:pointer;font-size:13px;line-height:1;transition:color .18s,border-color .18s}
+.pinbtn:hover{border-color:var(--lichen);color:var(--lichen)}
+.pinbtn.on{color:var(--gold);border-color:rgba(227,167,60,.5)}
+.pinbtn.hide.on{color:var(--toxic);border-color:rgba(210,84,60,.4)}
+
+.grp-label{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);
+  padding:14px 0 9px;border-bottom:1px solid var(--bark);margin-bottom:4px}
+.grp-label:first-child{padding-top:0}
+.link-btn{background:none;border:none;color:var(--mute);font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;padding:12px 0 0;border-bottom:1px solid var(--bark)}
+.link-btn:hover{color:var(--lichen)}
+
+.rank-fw{display:flex;align-items:center;gap:7px;margin-top:8px;font-family:var(--mono);font-size:9px;
+  letter-spacing:.07em;text-transform:uppercase;color:var(--mute);line-height:1.4}
+.rank-fw::before{content:'→';color:var(--bark);flex:0 0 auto;font-size:10px}
+.rank-fw.rising{color:var(--rain)}
+.rank-fw.rising::before{color:var(--rain)}
+.rank-fw.peak{color:var(--gold)}
+.rank-fw.peak::before{color:var(--gold)}
+.rank-fw .proj{color:var(--paper);font-weight:600}
+.rank-fw .conf{margin-left:auto;font-size:8px;letter-spacing:.08em;color:var(--mute);
+  border:1px solid var(--bark);padding:2px 6px;border-radius:99px;flex:0 0 auto}
+.rank-fw .conf.loose{border-style:dashed}
+
+/* ---------- tabs ---------- */
+nav{position:sticky;top:0;background:rgba(20,23,15,.94);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--bark);z-index:20;margin-bottom:14px}
+.nav-in{max-width:520px;margin:0 auto;display:flex}
+.tab{flex:1;background:none;border:none;color:var(--mute);padding:14px 4px 13px;cursor:pointer;
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;transition:color .18s;position:relative}
+.tab[aria-selected="true"]{color:var(--paper)}
+.tab[aria-selected="true"]::before{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:26px;height:2px;background:var(--gold)}
+
+.view{display:none}
+.view.on{display:block;animation:rise .32s cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.empty{text-align:center;padding:34px 20px;color:var(--mute);font-size:13.5px}
+.loading{text-align:center;padding:30px;font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.1em}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}
+@media (max-width:380px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .readout{gap:13px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="brand">Svampe<em>spor</em></div>
+      <div class="tagline">Regn · tid · skovbund</div>
+    </div>
+    <div class="head-right">
+      <div class="src-badge" id="srcBadge">henter data</div>
+      <button class="avatar-btn out" id="avatarBtn" aria-label="Din profil">◦</button>
+    </div>
+  </header>
+
+  <nav>
+    <div class="nav-in" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-v="jagt">Jagten</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="bestem">Bestem</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="log">Mine fund</button>
+      <button class="tab" role="tab" aria-selected="false" data-v="faelles">Fælles</button>
+    </div>
+  </nav>
+
+  <div class="spots" id="spotChips" role="group" aria-label="Vælg skovområde"></div>
+
+  <div class="spot-passive" id="spotPassive"></div>
+
+  <!-- ============ VIEW: JAGTEN ============ -->
+  <section class="view on" id="v-jagt">
+    <div id="jagtBody"><div class="loading">LÆSER SKOVBUNDEN…</div></div>
+  </section>
+
+  <!-- ============ VIEW: MINE FUND ============ -->
+  <section class="view" id="v-log">
+    <div class="insight" id="insightBox"></div>
+
+    <div class="panel">
+      <div class="panel-label">Log et fund</div>
+      <div class="field">
+        <label for="fArt">Art</label>
+        <select id="fArt"></select>
+      </div>
+      <div id="artWarn"></div>
+      <div class="field field-row">
+        <div>
+          <label for="fHab">Habitat</label>
+          <select id="fHab">
+            <option>Bøgeskov, muldbund</option>
+            <option>Gammel granplantage</option>
+            <option>Blandet løvskov</option>
+            <option>Egeskov, sur bund</option>
+            <option>Skovbryn / lysning</option>
+            <option>Mosset klit / fyr</option>
+          </select>
+        </div>
+        <div>
+          <label for="fAnt">Antal</label>
+          <input type="text" id="fAnt" value="6" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label for="fNote">Feltnote</label>
+        <textarea id="fNote" placeholder="Lugt, lameller, substrat, hvordan lyset faldt…"></textarea>
+      </div>
+      <button class="btn" id="saveFind">Gem fund med vejrsnapshot</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label"><span>Feltdagbog</span><span id="findCount"></span></div>
+      <div id="findList"></div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: FÆLLES ============ -->
+  <section class="view" id="v-faelles">
+    <div class="panel">
+      <div class="share-toggle">
+        <div>
+          <b style="font-size:14px">Del mine fund</b>
+          <p>Andre ser art, dato og et cirka-område på 2 km. Din præcise plet forlader aldrig telefonen.</p>
+        </div>
+        <button class="switch" id="shareSw" role="switch" aria-checked="false" aria-label="Del mine fund"></button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label"><span>Sæsonens jagt</span><span style="color:var(--gold)">Uge 35</span></div>
+      <div class="bestday" style="margin-top:0">
+        <div class="num">17</div>
+        <div class="txt"><b>Årets første tragtkantarel</b>17 svampejægere har meldt fund i Nordsjælland i denne uge.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Seneste fund i dit område</div>
+      <div id="feedList"></div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW: BESTEM ============ -->
+  <section class="view" id="v-bestem">
+    <div class="creed">
+      <div class="k">Læs dette først</div>
+      <p>Svampespor giver <b>forslag, aldrig facit</b>, og udtaler sig ikke om spiselighed. En bestemmelse på et foto kan ikke erstatte svampen i hånden — lugt, konsistens, sporeaftryk og stokbasen findes ikke i et billede. <b>Spis aldrig en svamp på baggrund af en app.</b></p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label"><span>Tre billeder</span><span id="shotCount">0 / 3</span></div>
+      <p class="shot-hint">Bestemmelsen bliver kun så god som dine billeder. Fotografér <b>hatten ovenfra</b>, <b>undersiden</b> med lameller eller rør, og <b>hele stokken med basen gravet fri</b> — det er ved foden, de dødelige fluesvampe afslører deres pose.</p>
+      <div class="shots" id="shots"></div>
+      <input type="file" id="fileIn" accept="image/*" style="display:none">
+
+      <div class="field">
+        <label for="bHab">Voksested</label>
+        <select id="bHab">
+          <option>Bøgeskov, muldbund</option>
+          <option>Gammel granplantage</option>
+          <option>Blandet løvskov</option>
+          <option>Egeskov, sur bund</option>
+          <option>Skovbryn / lysning</option>
+          <option>Mosset klit / fyr</option>
+          <option>På dødt træ / stub</option>
+          <option>Græsplæne / eng</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="bObs">Hvad mærker du? (lugt, konsistens, farveskift ved snit)</label>
+        <textarea id="bObs" placeholder="Svag abrikoslugt. Fast kød. Blånede ikke ved snit."></textarea>
+      </div>
+      <button class="btn" id="idBtn">Bestem art</button>
+    </div>
+
+    <div id="idResult"></div>
+  </section>
+
+  <!-- ============ VIEW: PROFIL ============ -->
+  <section class="view" id="v-profil">
+    <div id="profBody"></div>
+  </section>
+
+  <!-- ============ DELE-ARK ============ -->
+  <div class="sheet" id="sheet">
+    <div class="sheet-in">
+      <div class="sheet-top"><b>Del dit fund</b><button id="sheetX" aria-label="Luk">×</button></div>
+      <canvas class="card-prev" id="cardCv" width="1080" height="1350"></canvas>
+      <div class="plats" id="plats"></div>
+      <div class="cap-box">
+        <div class="ct" id="capText"></div>
+        <div class="cm"><span id="capMeta"></span><span id="capLen"></span></div>
+      </div>
+      <button class="btn" id="doShareBtn">Del</button>
+      <button class="btn ghost" id="copyCap" style="margin-top:8px">Kopiér tekst</button>
+      <p style="font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--mute);margin-top:12px;line-height:1.7" id="shareNote"></p>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+/* ==========================================================
+   SVAMPESPOR — prototype
+   Vejrdata: Open-Meteo (gratis, ingen nøgle). Falder tilbage
+   til demodata hvis netværket er lukket i sandkassen.
+   ========================================================== */
+
+const SPOTS = [
+  {id:'gribskov',   name:'Gribskov',        sub:'Nordsjælland', lat:55.978, lon:12.294, min:55, hab:['bøg','gran','mos','gammelskov']},
+  {id:'tisvilde',   name:'Tisvilde Hegn',   sub:'Nordkysten',   lat:56.048, lon:12.092, min:65, hab:['fyr','mos','klit','sur']},
+  {id:'rude',       name:'Rude Skov',       sub:'Holte',        lat:55.833, lon:12.443, min:30, hab:['bøg','gran','løv']},
+  {id:'dyrehaven',  name:'Dyrehaven',       sub:'Klampenborg',  lat:55.792, lon:12.573, min:20, hab:['eg','bøg','græs','gammelskov']},
+  {id:'vestskoven', name:'Vestskoven',      sub:'Albertslund',  lat:55.684, lon:12.341, min:25, hab:['løv','ungskov','lysning']},
+  {id:'hareskov',   name:'Hareskoven',      sub:'Værløse',      lat:55.767, lon:12.383, min:25, hab:['bøg','gran','løv']},
+  {id:'jaegersborg',name:'Jægersborg Hegn', sub:'Skodsborg',    lat:55.812, lon:12.552, min:24, hab:['bøg','eg','dødttræ']},
+  {id:'storedyre',  name:'Store Dyrehave',  sub:'Hillerød',     lat:55.912, lon:12.318, min:48, hab:['bøg','gran','mos']},
+  {id:'tokkekob',   name:'Tokkekøb Hegn',   sub:'Allerød',      lat:55.887, lon:12.394, min:42, hab:['gran','bøg','sur']},
+  {id:'boserup',    name:'Boserup Skov',    sub:'Roskilde',     lat:55.652, lon:12.024, min:45, hab:['bøg','løv','lysning']},
+];
+
+/* hvilke voksesteder de enkelte arter faktisk søger — bruges når du ingen historik har */
+const ART_HAB = {
+  'Kantarel':                   ['bøg','mos','løv','sur'],
+  'Spiselig rørhat (Karl Johan)':['gran','bøg','mos','gammelskov'],
+  'Tragtkantarel':              ['gran','mos','sur','fyr'],
+  'Almindelig champignon':      ['græs','lysning','ungskov'],
+  'Stor parasolhat':            ['lysning','græs','løv'],
+  'Østershat':                  ['dødttræ','bøg','løv'],
+  'Rødmende skørhat':           ['bøg','eg','løv'],
+};
+
+const ARTER = [
+  {n:'Kantarel', lat:'Cantharellus cibarius', risk:'low',
+   warn:'Forveksles med falsk kantarel og olivenbrun kantarelrørhat. Tjek de nedløbende <b>ribber</b> — ikke ægte lameller — og den svage abrikoslugt.',
+   window:[5,9], rain:14},
+  {n:'Spiselig rørhat (Karl Johan)', lat:'Boletus edulis', risk:'low',
+   warn:'Forveksles med galderørhat, som er ubrugelig af bitterhed. Rør-laget er hvidt til gulgrønt hos Karl Johan, lyserødt hos galderørhatten.',
+   window:[6,11], rain:18},
+  {n:'Tragtkantarel', lat:'Craterellus tubaeformis', risk:'low',
+   warn:'Få farlige forvekslinger, men vokser tit i tætte tæpper — tag kun en del af bestanden, så mycelium og fællesskab har noget til næste år.',
+   window:[7,13], rain:16},
+  {n:'Almindelig champignon', lat:'Agaricus campestris', risk:'high',
+   warn:'<b>Højeste agtpågivenhed.</b> Unge champignon-lignende svampe forveksles med <b>grøn fluesvamp</b> og <b>snehvid fluesvamp</b> — begge dødeligt giftige. Grav altid hele stokbasen op: en <b>tydelig pose (volva)</b> ved foden betyder fluesvamp. Champignonens lameller bliver lyserøde og siden brune; fluesvampens forbliver hvide.',
+   window:[4,8], rain:12},
+  {n:'Stor parasolhat', lat:'Macrolepiota procera', risk:'med',
+   warn:'Forveksles med kastanieparasolhat (giftig), der er markant mindre og rødmer ved snit. Den ægte har <b>slangebroget stok</b> og en dobbelt ring, der kan skydes op og ned.',
+   window:[5,10], rain:14},
+  {n:'Østershat', lat:'Pleurotus ostreatus', risk:'low',
+   warn:'Vokser på dødt løvtræ, typisk bøg. Kommer først for alvor efter <b>frost</b> — vejrvinduet her er et andet end for skovbundens arter.',
+   window:[3,9], rain:10},
+  {n:'Rødmende skørhat', lat:'Russula vesca', risk:'med',
+   warn:'Skørhatte kræver smagsprøve-teknik: en lille bid på tungespidsen, spyttes ud. Bittert eller skarpt = lad den stå.',
+   window:[5,10], rain:15},
+];
+
+const SEED_FINDS = [
+  {art:'Kantarel', hab:'Bøgeskov, muldbund', ant:'14', spot:'Gribskov', note:'Nordvendt skråning ved den væltede bøg. Hele familien i én klynge — lugtede af abrikos allerede da jeg satte mig på hug.', date:'2026-08-19', snap:{r14:31, days:6, rh:88, t:19}},
+  {art:'Spiselig rørhat (Karl Johan)', hab:'Gammel granplantage', ant:'3', spot:'Tisvilde Hegn', note:'Store og orme-frie. Stod i mos langs den gamle brandvej.', date:'2026-08-11', snap:{r14:26, days:8, rh:84, t:21}},
+  {art:'Tragtkantarel', hab:'Blandet løvskov', ant:'40', spot:'Rude Skov', note:'Et helt tæppe. Tog en tredjedel. Tågen lå stadig mellem stammerne kl. 7.', date:'2025-10-04', snap:{r14:42, days:9, rh:93, t:12}},
+];
+
+/* ---------- state ---------- */
+let activeSpot = SPOTS[0].id;
+let weather = {};        // spotId -> parsed data
+let liveData = false;
+let finds = SEED_FINDS.map(f => ({...f}));
+let sharing = false;
+const TODAY = new Date('2026-08-25T09:00:00');
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const dayNames = ['søn','man','tir','ons','tor','fre','lør'];
+const DAYS_FULL = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+const fmtDate = d => d.toLocaleDateString('da-DK',{day:'numeric',month:'short'});
+
+function seeded(seed){ let s = seed; return () => { s = (s*1664525 + 1013904223) % 4294967296; return s/4294967296; }; }
+
+/* ---------- weather: fetch or simulate ---------- */
+async function loadWeather(spot){
+  if (weather[spot.id]) return weather[spot.id];
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${spot.lat}&longitude=${spot.lon}`
+    + `&daily=precipitation_sum,temperature_2m_max,temperature_2m_min`
+    + `&hourly=relative_humidity_2m,soil_moisture_0_to_7cm`
+    + `&past_days=14&forecast_days=7&timezone=Europe%2FCopenhagen`;
+  try {
+    const ctl = new AbortController();
+    setTimeout(()=>ctl.abort(), 6000);
+    const res = await fetch(url, {signal: ctl.signal});
+    if(!res.ok) throw new Error('bad status');
+    const j = await res.json();
+    liveData = true;
+    weather[spot.id] = parseOpenMeteo(j);
+  } catch(e) {
+    weather[spot.id] = simulate(spot);
+  }
+  return weather[spot.id];
+}
+
+function parseOpenMeteo(j){
+  const days = j.daily.time.map((t,i)=>{
+    const dayHours = j.hourly.time
+      .map((ht,hi)=>({ht,hi}))
+      .filter(o=>o.ht.startsWith(t));
+    const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+    return {
+      date: t,
+      precip: j.daily.precipitation_sum[i] ?? 0,
+      tmax: j.daily.temperature_2m_max[i],
+      tmin: j.daily.temperature_2m_min[i],
+      rh: avg(dayHours.map(o=>j.hourly.relative_humidity_2m[o.hi]).filter(v=>v!=null)),
+      soil: avg(dayHours.map(o=>j.hourly.soil_moisture_0_to_7cm[o.hi]).filter(v=>v!=null)),
+    };
+  });
+  return {days, todayIdx: days.findIndex(d => d.date === new Date().toISOString().slice(0,10)) };
+}
+
+/* Demodata: stabil pr. lokation, plausibel sensommer på Sjælland */
+function simulate(spot){
+  const rnd = seeded(Math.round((spot.lat+spot.lon)*10000));
+  const days = [];
+  const start = new Date(TODAY); start.setDate(start.getDate()-14);
+  // en rigtig regnhændelse for 6-9 dage siden, plus lidt drys
+  const eventDay = 14 - Math.floor(4 + rnd()*5);
+  for(let i=0;i<21;i++){
+    const d = new Date(start); d.setDate(d.getDate()+i);
+    let p = rnd() < .58 ? 0 : +(rnd()*3.4).toFixed(1);
+    if(i === eventDay)   p = +(9 + rnd()*13).toFixed(1);
+    if(i === eventDay+1) p = +(2 + rnd()*7).toFixed(1);
+    if(i === 17)         p = +(rnd()*6).toFixed(1);
+    const near = Math.max(0, 1 - Math.abs(i-eventDay)/6);
+    days.push({
+      date: d.toISOString().slice(0,10),
+      precip: p,
+      tmax: +(16 + rnd()*7).toFixed(1),
+      tmin: +(9 + rnd()*4).toFixed(1),
+      rh:   +(68 + near*20 + rnd()*8).toFixed(0),
+      soil: +(0.17 + near*0.16 + rnd()*0.05).toFixed(3),
+    });
+  }
+  return {days, todayIdx:14};
+}
+
+/* ---------- the model ---------- */
+function analyse(w, art){
+  const {days, todayIdx} = w;
+  const A = art || ARTER[0];
+  const past = days.slice(0, todayIdx+1);
+
+  // seneste betydelige regnhændelse (>=5 mm på en dag)
+  let evIdx = -1;
+  for(let i=past.length-1;i>=0;i--){ if(past[i].precip >= 5){ evIdx = i; break; } }
+  const daysSince = evIdx >= 0 ? todayIdx - evIdx : null;
+
+  // regnmængde i hændelsen (dagen + 2 efter)
+  const evRain = evIdx >= 0
+    ? days.slice(evIdx, Math.min(evIdx+3, days.length)).reduce((a,d)=>a+d.precip,0) : 0;
+
+  const r14 = past.slice(-14).reduce((a,d)=>a+d.precip,0);
+  const rh3 = past.slice(-3).reduce((a,d)=>a+(d.rh||70),0)/3;
+  const t5  = past.slice(-5).reduce((a,d)=>a+d.tmax,0)/5;
+  const soil = past.slice(-2).reduce((a,d)=>a+(d.soil||.2),0)/2;
+
+  const score = scoreFor(todayIdx, days, A);
+
+  // bedste dag frem i tiden — vægtet med tilliden til prognosen,
+  // så et løst dag-6-tal ikke slår et solidt dag-2-tal
+  let best = {i: todayIdx, s: score, lo: score, hi: score, w: score, conf:'målt', lead:0, spread:0};
+  for(let i=todayIdx+1;i<days.length;i++){
+    const r = projectedRange(i, days, todayIdx, A);
+    if(r.w > best.w) best = {i, s:r.mid, lo:r.lo, hi:r.hi, w:r.w, conf:r.conf, lead:r.lead, spread:r.spread};
+  }
+
+  return {score, daysSince, evIdx, evRain, r14, rh3, t5, soil, best,
+          window:[A.window[0], A.window[1]], art:A};
+}
+
+function scoreFor(idx, days, A){
+  const past = days.slice(0, idx+1);
+  let evIdx = -1;
+  for(let i=past.length-1;i>=0;i--){ if(past[i].precip >= 5){ evIdx = i; break; } }
+  if(evIdx < 0) return 8;
+  const since = idx - evIdx;
+  const evRain = days.slice(evIdx, Math.min(evIdx+3, days.length)).reduce((a,d)=>a+d.precip,0);
+
+  // 1) modningsvindue — gaussisk om artens optimum
+  const mid = (A.window[0]+A.window[1])/2, wid = (A.window[1]-A.window[0])/2 + 1.2;
+  const winScore = 42 * Math.exp(-Math.pow(since-mid,2)/(2*wid*wid));
+
+  // 2) regnmængde i hændelsen
+  const rainScore = 24 * Math.min(1, evRain / A.rain);
+
+  // 3) luftfugtighed seneste 3 dage
+  const rh = past.slice(-3).reduce((a,d)=>a+(d.rh||70),0)/3;
+  const rhScore = 15 * Math.max(0, Math.min(1, (rh-62)/28));
+
+  // 4) temperatur — optimum ~13°C, falder uden for 8-20
+  const t = past.slice(-5).reduce((a,d)=>a+d.tmax,0)/5;
+  const tScore = 12 * Math.exp(-Math.pow(t-14,2)/(2*5.5*5.5));
+
+  // 5) jordfugt i topjord
+  const so = past.slice(-2).reduce((a,d)=>a+(d.soil||.2),0)/2;
+  const soScore = 7 * Math.max(0, Math.min(1, (so-0.15)/0.20));
+
+  return Math.round(Math.max(0, Math.min(100, winScore+rainScore+rhScore+tScore+soScore)));
+}
+
+function band(s){
+  if(s>=72) return {t:'Modningsvinduet er åbent', c:'var(--gold)', k:'open'};
+  if(s>=52) return {t:'Værd at gå en tur',        c:'var(--lichen)', k:'ok'};
+  if(s>=32) return {t:'Tidligt endnu',            c:'var(--rain)', k:'soon'};
+  return          {t:'Skovbunden er tør',         c:'var(--mute)', k:'dry'};
+}
+
+/* ---------- render: JAGTEN ---------- */
+async function renderJagt(){
+  const spot = SPOTS.find(s=>s.id===activeSpot);
+  const w = await loadWeather(spot);
+  const a = analyse(w, ARTER[targetArt]);
+  const b = band(a.score);
+  const {days, todayIdx} = w;
+
+  $('#srcBadge').textContent = liveData ? 'Open-Meteo · live' : 'demodata';
+  $('#srcBadge').className = 'src-badge' + (liveData ? ' live' : '');
+
+  const maxP = Math.max(6, ...days.map(d=>d.precip));
+
+  // regnstribe
+  let bars = '';
+  days.forEach((d,i)=>{
+    const dt = new Date(d.date+'T12:00:00');
+    const h = Math.max(2, (d.precip/maxP)*82);
+    const fc = i > todayIdx;
+    const cls = ['bar', fc?'fc':'', (!fc && d.precip>=5)?'big':''].filter(Boolean).join(' ');
+    const dim = fc ? `opacity:${Math.max(.32, 1 - (i-todayIdx)*0.11).toFixed(2)}` : '';
+    bars += `<div class="bar-col ${i===todayIdx?'today':''}">
+      <div class="tip">${dayNames[dt.getDay()]} ${fmtDate(dt)} · ${d.precip.toFixed(1)} mm${fc?' · prognose':''}</div>
+      <div class="${cls}" style="height:${h}px;${dim}"></div>
+      <div class="bar-lbl">${i===todayIdx?'i dag':(i%3===0?dt.getDate():'')}</div>
+    </div>`;
+  });
+
+  // modningsbånd
+  let bandHtml = '';
+  if(a.evIdx >= 0){
+    const from = a.evIdx + a.window[0], to = Math.min(days.length-1, a.evIdx + a.window[1]);
+    const L = (from/days.length)*100, W = ((to-from+1)/days.length)*100;
+    bandHtml = `<div class="ripen-band" style="left:${L}%;width:${W}%">
+        <div class="ripen-tag">modningsvindue</div></div>`;
+  }
+
+  const bestDt = new Date(days[a.best.i].date+'T12:00:00');
+  const wide = a.best.lead > 0 && a.best.spread >= 6;
+  const bestNum = wide ? `${a.best.lo}–${a.best.hi}` : a.best.s;
+  const bestTxt = a.best.i === todayIdx
+    ? `<b>I dag er den bedste dag i vinduet</b>Indekset falder igen fra i overmorgen, medmindre der kommer ny regn.`
+    : `<b>${DAYS_FULL[bestDt.getDay()]} ${fmtDate(bestDt)} ser bedst ud</b>${
+        wide ? `Prognosen peger på ${a.best.lo}–${a.best.hi} afhængigt af, hvor meget regn der faktisk falder.`
+             : `Prognosen løfter indekset til ${a.best.s}.`
+      } ${a.best.lead >= 5 ? 'Så langt frem er nedbøren et gæt — tjek igen om et par dage.'
+        : a.best.lead >= 3 ? 'Nedbørsmængden kan stadig flytte sig.' : ''}`;
+
+  const rainLine = a.daysSince === null
+    ? 'Ingen betydelig regn i de sidste 14 dage. Myceliet venter.'
+    : `Det regnede <b>${a.evRain.toFixed(0)} mm</b> for <b>${a.daysSince} ${a.daysSince===1?'dag':'dage'}</b> siden. Kantareller bryder typisk frem 5-9 dage efter.`;
+
+  $('#jagtBody').innerHTML = `
+    <div class="panel">
+      <div class="readout">
+        ${dial(a.score, 96, b.c)}
+        <div class="verdict">
+          <h2 style="color:${b.c}">${b.t}</h2>
+          <p>${rainLine}</p>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><b class="rain-c">${a.r14.toFixed(0)}</b><span>mm / 14 d</span></div>
+        <div class="metric"><b class="gold-c">${a.daysSince ?? '–'}</b><span>dage siden regn</span></div>
+        <div class="metric"><b>${a.rh3.toFixed(0)}%</b><span>luftfugt</span></div>
+        <div class="metric"><b>${a.t5.toFixed(0)}°</b><span>middel max</span></div>
+      </div>
+      <div class="bestday"><div class="num" style="${wide?'font-size:19px':''}">${bestNum}</div><div class="txt">${bestTxt}</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label"><span>Regnstriben — ${spot.name}</span><span>21 dage</span></div>
+      <div class="strip-wrap">
+        <div class="strip">${bandHtml}${bars}</div>
+      </div>
+      <div class="strip-legend">
+        <div class="leg"><i style="background:var(--rain)"></i> hændelse ≥5 mm</div>
+        <div class="leg"><i style="background:var(--rain-deep)"></i> målt nedbør</div>
+        <div class="leg"><i style="border:1px dashed rgba(109,169,201,.6)"></i> prognose</div>
+        <div class="leg"><i style="background:rgba(227,167,60,.35)"></i> modningsvindue</div>
+      </div>
+    </div>
+
+    ${await spotPanel()}`;
+}
+
+function dial(score, size, color){
+  const r = size/2 - 7, c = 2*Math.PI*r, off = c - (score/100)*c;
+  return `<div class="dial" style="flex-basis:${size}px;height:${size}px">
+    <svg width="${size}" height="${size}">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--bark)" stroke-width="6"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="6"
+        stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
+    </svg>
+    <div class="dial-num"><b style="color:${color}">${score}</b><span>INDEKS</span></div>
+  </div>`;
+}
+
+async function spotChipsSource(){
+  return SPOTS.filter(s=>rel(s.id)==='pinned' || rel(s.id)==='followed');
+}
+
+/* ---------- render: LOG ---------- */
+function renderArtSelect(){
+  $('#fArt').innerHTML = ARTER.map((a,i)=>`<option value="${i}">${a.n}</option>`).join('');
+  showArtWarn();
+}
+function showArtWarn(){
+  const a = ARTER[+$('#fArt').value];
+  const high = a.risk === 'high';
+  $('#artWarn').innerHTML = `<div class="warn ${high?'':'safe'}">
+    <span class="ic">${high?'!':'i'}</span>
+    <div><b>${a.lat}</b><br>${a.warn}</div></div>`;
+}
+
+async function renderFinds(){
+  $('#findCount').textContent = finds.length + ' fund';
+  if(!finds.length){ $('#findList').innerHTML = `<div class="empty">Ingen fund endnu. Første tur starter her.</div>`; return; }
+  $('#findList').innerHTML = finds.map((f,i)=>{
+    const d = new Date(f.date+'T12:00:00');
+    const tag = f.source==='ai'
+      ? `<span class="src-tag ai">AI-forslag ${f.conf}%</span>`
+      : `<span class="src-tag">egen bestemmelse</span>`;
+    return `<div class="find">
+      <div class="find-top"><b>${f.art}${tag}</b><time>${d.toLocaleDateString('da-DK',{day:'numeric',month:'long',year:'numeric'})}</time></div>
+      ${f.photos?.length ? `<div class="find-shots">${f.photos.map(p=>`<img src="${p}" alt="Foto af ${f.art}">`).join('')}</div>` : ''}
+      <div class="find-meta">${f.ant} stk · ${f.hab} · ${f.spot}</div>
+      ${f.note ? `<div class="find-note">"${f.note}"</div>` : ''}
+      <div class="snap">
+        <div><b>${f.snap.r14} mm</b><span>14 d før</span></div>
+        <div><b>${f.snap.days} d</b><span>siden regn</span></div>
+        <div><b>${f.snap.rh}%</b><span>luftfugt</span></div>
+        <div><b>${f.snap.t}°</b><span>temp</span></div>
+      </div>
+      <div class="find-foot">
+        <button class="share-btn" data-share="${i}">${profile ? 'Del fundet' : 'Del — kræver profil'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderInsight(){
+  const kant = finds.filter(f=>f.art==='Kantarel');
+  const all = finds.filter(f=>f.snap);
+  if(all.length < 2){
+    $('#insightBox').innerHTML = `<div class="k">Dit mønster</div>
+      <p>Log <b>3 fund</b>, så begynder Svampespor at læse dine egne tal frem for gennemsnittet.</p>`;
+    return;
+  }
+  const lo = Math.min(...all.map(f=>f.snap.days)), hi = Math.max(...all.map(f=>f.snap.days));
+  const mm = Math.round(all.reduce((a,f)=>a+f.snap.r14,0)/all.length);
+  const rh = Math.round(all.reduce((a,f)=>a+f.snap.rh,0)/all.length);
+  $('#insightBox').innerHTML = `<div class="k">Dit mønster</div>
+    <p>Dine fund falder konsekvent <b>${lo}-${hi} dage</b> efter regn, ved omkring <b>${mm} mm</b> over fjorten dage og <b>${rh}% luftfugtighed</b>.
+    ${kant.length ? `Kantarellerne kommer i den tidlige ende af vinduet — du var på plads dag ${kant[0].snap.days}.` : ''}</p>
+    <small>Bygget på ${all.length} fund. Modellen skærpes for hver tur.</small>`;
+}
+
+/* ---------- render: FÆLLES ---------- */
+const FEED = [
+  {who:'Mette H.', when:'i går', art:'Tragtkantarel', loc:'~2 km fra Gribskov', tags:[['ver','2 bekræftelser'],['','40+ stk']], av:'M'},
+  {who:'Jonas Bech', when:'2 dage siden', art:'Spiselig rørhat', loc:'~2 km fra Tisvilde Hegn', tags:[['ver','4 bekræftelser'],['','under gran']], av:'J'},
+  {who:'skovmuld_dk', when:'3 dage siden', art:'Ukendt — rørhat?', loc:'~2 km fra Rude Skov', tags:[['pend','afventer hjælp'],['','sporeaftryk vedlagt']], av:'S'},
+  {who:'Aase L.', when:'4 dage siden', art:'Stor parasolhat', loc:'~2 km fra Vestskoven', tags:[['ver','6 bekræftelser'],['','skovbryn']], av:'A'},
+];
+function renderFeed(){
+  $('#feedList').innerHTML = FEED.map(f=>`<div class="feed-item">
+    <div class="av">${f.av}</div>
+    <div class="feed-body">
+      <div class="feed-head"><b>${f.who}</b> <span>· ${f.when}</span></div>
+      <div class="feed-find">${f.art}</div>
+      <div class="feed-loc">${f.loc}</div>
+      <div class="feed-tags">${f.tags.map(t=>`<span class="tag ${t[0]}">${t[1]}</span>`).join('')}</div>
+    </div></div>`).join('');
+}
+
+/* ---------- chips + nav ---------- */
+function renderChips(){
+  const mine = SPOTS.filter(s=>rel(s.id)==='pinned').concat(SPOTS.filter(s=>rel(s.id)==='followed'));
+  $('#spotChips').innerHTML = mine.map(s=>
+    `<button class="spot-chip" data-spot="${s.id}" aria-pressed="${s.id===activeSpot}">
+      <span class="dot" style="background:${s.id===activeSpot?'var(--gold)':rel(s.id)==='pinned'?'var(--lichen)':'var(--mute)'}"></span>${s.name}</button>`
+  ).join('');
+}
+
+document.addEventListener('click', e=>{
+  const chip = e.target.closest('[data-spot]');
+  if(chip){ activeSpot = chip.dataset.spot; renderChips(); renderJagt(); switchView('jagt'); return; }
+  const tab = e.target.closest('.tab');
+  if(tab) switchView(tab.dataset.v);
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && e.target.classList?.contains('spot-row')) e.target.click();
+});
+
+function renderPassive(v){
+  const s = SPOTS.find(x=>x.id===activeSpot);
+  const show = (v==='bestem' || v==='log');
+  const el = $('#spotPassive');
+  el.style.display = show ? 'flex' : 'none';
+  if(!show) return;
+  const verb = v==='bestem' ? 'Fundet gemmes på' : 'Aktivt område';
+  el.innerHTML = `<span class="pin"></span>${verb} <b>${s.name}</b>
+    <button class="swap" data-goto-jagt>skift</button>`;
+}
+
+function switchView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('on', el.id==='v-'+v));
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', t.dataset.v===v));
+  $('#spotChips').style.display = (v==='jagt') ? 'flex' : 'none';
+  if(v==='profil') renderProfile();
+  renderPassive(v);
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+document.addEventListener('click', e=>{
+  if(e.target.closest('[data-goto-jagt]')) switchView('jagt');
+});
+
+$('#fArt').addEventListener('change', showArtWarn);
+
+$('#shareSw').addEventListener('click', ()=>{
+  sharing = !sharing;
+  $('#shareSw').setAttribute('aria-checked', sharing);
+});
+
+$('#saveFind').addEventListener('click', async ()=>{
+  const spot = SPOTS.find(s=>s.id===activeSpot);
+  const w = await loadWeather(spot);
+  const a = analyse(w);
+  finds.unshift({
+    art: ARTER[+$('#fArt').value].n,
+    hab: $('#fHab').value,
+    ant: $('#fAnt').value || '1',
+    spot: spot.name,
+    note: $('#fNote').value.trim(),
+    date: TODAY.toISOString().slice(0,10),
+    snap: {r14: Math.round(a.r14), days: a.daysSince ?? 0, rh: Math.round(a.rh3), t: Math.round(a.t5)}
+  });
+  $('#fNote').value = ''; $('#fAnt').value = '6';
+  renderFinds(); renderInsight();
+  const btn = $('#saveFind'); const old = btn.textContent;
+  btn.textContent = 'Gemt — vejret fulgte med'; btn.style.background = 'var(--gold)';
+  setTimeout(()=>{ btn.textContent = old; btn.style.background = ''; }, 1900);
+});
+
+/* ==========================================================
+   ARTSBESTEMMELSE
+   ========================================================== */
+const SHOT_SLOTS = [
+  {k:'hat',    cap:'Hatten ovenfra', req:'vigtig'},
+  {k:'under',  cap:'Undersiden — lameller / rør', req:'vigtig'},
+  {k:'stok',   cap:'Stok + base gravet fri', req:'kritisk'},
+];
+let shots = [null,null,null];
+let pickSlot = 0;
+let lastId = null;
+
+function renderShots(){
+  $('#shots').innerHTML = SHOT_SLOTS.map((s,i)=>{
+    if(shots[i]) return `<div class="shot filled" data-slot="${i}">
+        <img src="${shots[i].url}" alt="${s.cap}">
+        <button class="x" data-clear="${i}" aria-label="Fjern billede">×</button>
+        <span class="req">${s.k}</span></div>`;
+    return `<div class="shot" data-slot="${i}" role="button" tabindex="0">
+        <span class="glyph">+</span><span class="cap">${s.cap}</span>
+        <span class="req">${s.req}</span></div>`;
+  }).join('');
+  $('#shotCount').textContent = shots.filter(Boolean).length + ' / 3';
+}
+
+/* skalér ned før upload — sparer båndbredde og gør analysen hurtigere */
+function shrink(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1120, sc = Math.min(1, max/Math.max(img.width,img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        const url = c.toDataURL('image/jpeg', .85);
+        res({url, b64: url.split(',')[1]});
+      };
+      img.onerror = () => rej(new Error('Billedet kunne ikke læses'));
+      img.src = r.result;
+    };
+    r.onerror = () => rej(new Error('Filen kunne ikke læses'));
+    r.readAsDataURL(file);
+  });
+}
+
+$('#fileIn').addEventListener('change', async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  try { shots[pickSlot] = await shrink(f); renderShots(); }
+  catch(err){ idError('Billedet kunne ikke læses. Prøv et andet format — JPEG eller PNG.'); }
+  e.target.value = '';
+});
+
+document.addEventListener('click', e=>{
+  const clr = e.target.closest('[data-clear]');
+  if(clr){ e.stopPropagation(); shots[+clr.dataset.clear] = null; renderShots(); return; }
+  const slot = e.target.closest('[data-slot]');
+  if(slot){ pickSlot = +slot.dataset.slot; $('#fileIn').click(); }
+});
+
+function idError(msg){
+  $('#idResult').innerHTML = `<div class="panel"><div class="warn">
+    <span class="ic">!</span><div><b>Bestemmelsen kunne ikke gennemføres</b><br>${msg}</div></div>
+    <p style="font-size:12.5px;color:var(--mute);line-height:1.5;margin-top:4px">
+    Du kan stadig logge fundet manuelt under <b style="color:var(--lichen)">Mine fund</b> og bestemme det senere med bog og sporeaftryk.</p></div>`;
+}
+
+const ID_PROMPT = `Du er en erfaren dansk mykolog, der hjælper en svampesamler med at indkredse en art ud fra feltbilleder. Du arbejder efter Svampespors grundregel: du giver forslag og beviser, aldrig facit, og du udtaler dig ALDRIG om hvorvidt en svamp kan spises.
+
+Regler du altid følger:
+- Angiv 1-3 kandidater, rangeret. Vær ærligt usikker: er billederne dårlige eller arten svær, så hold confidence lav (under 45).
+- Er billedet ikke af en svamp, eller er det ubrugeligt til bestemmelse, sæt quality til "utilstraekkelig" og returnér en tom candidates-liste.
+- Angiv ALTID relevante danske forvekslingsarter. Har kandidaten hvide lameller, ring eller pose ved foden, SKAL grøn fluesvamp (Amanita phalloides) med som dødelig forveksling, hvis den overhovedet er tænkelig.
+- Under missing_evidence: nævn konkret hvad samleren skal undersøge for at komme videre — sporeaftryk, stokbasen gravet fri, snitflade, lugt, voksested.
+- Skriv alt på dansk, i knap og konkret feltsprog.
+- ripening_window er [tidligst, senest] antal dage efter en regnhændelse, hvor arten typisk bryder frem. rain_mm er den nedbørsmængde arten typisk kræver.
+
+Svar KUN med rå JSON, ingen indledning og ingen markdown-backticks:
+{"quality":"god|brugbar|utilstraekkelig","quality_note":"kort vurdering af billedmaterialet","candidates":[{"name_da":"","name_lat":"","confidence":0,"reasoning":"hvad i billedet peger på denne art","key_features":["kendetegn der er synlige"],"ripening_window":[5,9],"rain_mm":14}],"lookalikes":[{"name_da":"","name_lat":"","severity":"doedelig|giftig|uspiselig","how_to_tell":"det ene kendetegn der skiller dem"}],"missing_evidence":["..."]}`;
+
+$('#idBtn').addEventListener('click', async ()=>{
+  const imgs = shots.filter(Boolean);
+  if(!imgs.length){ idError('Tilføj mindst ét billede. Undersiden og stokbasen bærer de fleste af kendetegnene.'); return; }
+
+  $('#idResult').innerHTML = `<div class="panel"><div class="analysing">
+    <div class="spore"></div><p>Læser hat, lameller og stok…</p></div></div>`;
+
+  const ctx = `Voksested: ${$('#bHab').value}.` +
+    ($('#bObs').value.trim() ? ` Samlerens egne iagttagelser: ${$('#bObs').value.trim()}` : ' Samleren har ikke noteret lugt eller konsistens.') +
+    ` Fundet er gjort i Danmark, sidst i august. Billederne er i rækkefølgen: ${imgs.map((_,i)=>SHOT_SLOTS[shots.findIndex(s=>s===imgs[i])].cap).join(', ')}.`;
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6', max_tokens:1000,
+        messages:[{role:'user', content:[
+          ...imgs.map(im=>({type:'image', source:{type:'base64', media_type:'image/jpeg', data:im.b64}})),
+          {type:'text', text: ID_PROMPT + '\n\n' + ctx}
+        ]}]
+      })
+    });
+    if(!res.ok) throw new Error('api');
+    const data = await res.json();
+    const txt = data.content.filter(c=>c.type==='text').map(c=>c.text).join('\n')
+                  .replace(/```json|```/g,'').trim();
+    lastId = JSON.parse(txt);
+    renderId(lastId);
+  }catch(err){
+    idError('Der er ikke forbindelse til bestemmelsesmotoren lige nu.');
+  }
+});
+
+function renderId(r){
+  const qcol = r.quality==='god' ? 'var(--lichen)' : r.quality==='brugbar' ? 'var(--gold)' : 'var(--toxic)';
+  const qtxt = r.quality==='god' ? 'Godt billedmateriale' : r.quality==='brugbar' ? 'Brugbart, men mangelfuldt' : 'Utilstrækkeligt';
+
+  if(!r.candidates || !r.candidates.length){
+    $('#idResult').innerHTML = `<div class="panel">
+      <div class="qbar"><i style="background:${qcol}"></i>${qtxt}</div>
+      <div class="empty">${r.quality_note || 'Der er ikke nok i billederne til at pege på en art.'}</div>
+      ${r.missing_evidence?.length ? `<ul class="missing">${r.missing_evidence.map(m=>`<li>${m}</li>`).join('')}</ul>` : ''}
+    </div>`;
+    return;
+  }
+
+  const cands = r.candidates.map((c,i)=>{
+    const col = c.confidence>=65?'var(--lichen)':c.confidence>=40?'var(--gold)':'var(--toxic)';
+    return `<div class="cand ${i===0?'top':''}">
+      <div class="cand-head"><b>${c.name_da}</b><span class="pct" style="color:${col}">${c.confidence}%</span></div>
+      <div class="lat">${c.name_lat||''}</div>
+      <div class="conf"><i style="width:${c.confidence}%;background:${col}"></i></div>
+      <p>${c.reasoning||''}</p>
+      <div class="feats">${(c.key_features||[]).map(f=>`<div class="feat">${f}</div>`).join('')}</div>
+      <button class="cand-pick" data-cand="${i}">Gem som fund — ${c.name_da}</button>
+    </div>`;
+  }).join('');
+
+  const looks = (r.lookalikes||[]).map(l=>{
+    const sev = (l.severity||'uspiselig').replace('ø','o').replace('æ','ae');
+    const lbl = l.severity==='doedelig'?'dødelig':l.severity||'uspiselig';
+    return `<div class="look">
+      <span class="look-sev sev-${sev}">${lbl}</span>
+      <div class="look-body"><b>${l.name_da}</b><i>${l.name_lat||''}</i><p>${l.how_to_tell||''}</p></div>
+    </div>`;
+  }).join('');
+
+  $('#idResult').innerHTML = `
+    <div class="panel">
+      <div class="qbar"><i style="background:${qcol}"></i>${qtxt}${r.quality_note?' · '+r.quality_note:''}</div>
+      <div class="panel-label" style="margin-bottom:12px">Kandidater</div>
+      ${cands}
+    </div>
+    ${looks ? `<div class="panel"><div class="panel-label">Forvekslinger du skal udelukke</div>${looks}</div>` : ''}
+    ${r.missing_evidence?.length ? `<div class="panel"><div class="panel-label">Sådan kommer du videre</div>
+      <ul class="missing">${r.missing_evidence.map(m=>`<li>${m}</li>`).join('')}</ul></div>` : ''}`;
+}
+
+/* nye arter vandrer ind i artskataloget og bliver dermed en del af vejrmodellen */
+function ensureArt(c){
+  if(ARTER.some(a=>a.n.toLowerCase() === c.name_da.toLowerCase())) return;
+  ARTER.push({
+    n: c.name_da, lat: c.name_lat||'', risk:'med',
+    warn: 'Tilføjet fra din egen bestemmelse. Forvekslingerne blev vist ved bestemmelsen — genlæs dem, før du stoler på arten.',
+    window: c.ripening_window || [5,10],
+    rain: c.rain_mm || 14
+  });
+  renderArtSelect();
+}
+
+document.addEventListener('click', async e=>{
+  const pick = e.target.closest('[data-cand]');
+  if(!pick || !lastId) return;
+  const c = lastId.candidates[+pick.dataset.cand];
+  ensureArt(c);
+  const spot = SPOTS.find(s=>s.id===activeSpot);
+  const w = await loadWeather(spot);
+  const a = analyse(w);
+  finds.unshift({
+    art: c.name_da, hab: $('#bHab').value, ant:'1', spot: spot.name,
+    note: $('#bObs').value.trim(),
+    date: TODAY.toISOString().slice(0,10),
+    photos: shots.filter(Boolean).map(s=>s.url),
+    conf: c.confidence, source:'ai',
+    snap:{r14:Math.round(a.r14), days:a.daysSince??0, rh:Math.round(a.rh3), t:Math.round(a.t5)}
+  });
+  shots = [null,null,null]; renderShots();
+  $('#bObs').value = ''; $('#idResult').innerHTML = ''; lastId = null;
+  renderFinds(); renderInsight(); switchView('log');
+});
+
+/* ==========================================================
+   PROFIL & DELING
+   ========================================================== */
+let profile = null;   // {name, handles:{}, prefs:{}}
+const PLATFORMS = [
+  {k:'instagram', n:'Instagram', ic:'IG', ph:'@ditnavn',    max:2200, native:true},
+  {k:'facebook',  n:'Facebook',  ic:'FB', ph:'facebook.com/…', max:5000, native:false},
+  {k:'tiktok',    n:'TikTok',    ic:'TT', ph:'@ditnavn',    max:2200, native:true},
+  {k:'snapchat',  n:'Snapchat',  ic:'SC', ph:'ditnavn',     max:250,  native:true},
+];
+
+function renderProfile(){
+  if(!profile){
+    $('#profBody').innerHTML = `
+      <div class="panel">
+        <div class="panel-label">Din profil</div>
+        <p style="font-size:13.5px;line-height:1.55;color:var(--lichen);margin-bottom:16px">
+          En profil samler dine fund på tværs af sæsoner, lader dig dele dem, og gør dine egne vejrmønstre til noget, appen kan regne på. Dine pletter forbliver dine — kun det, du selv deler, forlader telefonen.</p>
+        <div class="field">
+          <label for="pName">Visningsnavn</label>
+          <input type="text" id="pName" placeholder="Rasmus" autocomplete="nickname">
+        </div>
+        <button class="btn" id="makeProf">Opret profil</button>
+        <p style="font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--mute);margin-top:12px;line-height:1.6">
+          PROTOTYPE — INGEN ADGANGSKODE, INGEN DATA FORLADER DENNE SIDE.<br>
+          I det rigtige byg: Supabase Auth med Apple/Google-login.</p>
+      </div>`;
+    return;
+  }
+
+  const arter = [...new Set(finds.map(f=>f.art))].length;
+  const dage  = [...new Set(finds.map(f=>f.date))].length;
+
+  $('#profBody').innerHTML = `
+    <div class="panel">
+      <div class="prof-head">
+        <div class="prof-av">${profile.name.charAt(0).toUpperCase()}</div>
+        <div class="prof-name"><b>${profile.name}</b><span>Svampesamler siden 2025</span></div>
+      </div>
+      <div class="prof-stats">
+        <div><b>${finds.length}</b><span>fund</span></div>
+        <div><b>${arter}</b><span>arter</span></div>
+        <div><b>${dage}</b><span>dage i felten</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Dine profiler</div>
+      <p style="font-size:12.5px;color:var(--mute);line-height:1.5;margin-bottom:6px">
+        Brugernavnet skrives ind i delekortet og i den færdige tekst, så din konto bliver krediteret, når nogen deler dit fund videre.</p>
+      ${PLATFORMS.map(p=>`<div class="handle-row">
+        <div class="hicon">${p.ic}</div>
+        <span class="hname">${p.n}</span>
+        <input class="hin" data-handle="${p.k}" value="${profile.handles[p.k]||''}" placeholder="${p.ph}">
+      </div>`).join('')}
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Sådan deles dine fund</div>
+      <div class="pref">
+        <div><b>Skjul den præcise plet</b><p>Delekortet viser skovområdet, aldrig koordinaterne. Anbefales.</p></div>
+        <button class="switch" data-pref="blur" role="switch" aria-checked="${profile.prefs.blur}"></button>
+      </div>
+      <div class="pref">
+        <div><b>Vis vejrdata på kortet</b><p>Regnmængde og dage siden regn. Det er den del, folk kommenterer på.</p></div>
+        <button class="switch" data-pref="weather" role="switch" aria-checked="${profile.prefs.weather}"></button>
+      </div>
+      <div class="pref">
+        <div><b>Skriv teksten for mig</b><p>Foreslår en billedtekst tilpasset den enkelte platform.</p></div>
+        <button class="switch" data-pref="caption" role="switch" aria-checked="${profile.prefs.caption}"></button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <button class="btn ghost" id="logOut">Log ud</button>
+    </div>`;
+}
+
+document.addEventListener('click', e=>{
+  if(e.target.closest('#avatarBtn')){ switchView('profil'); return; }
+  if(e.target.closest('#makeProf')){
+    const n = $('#pName').value.trim();
+    if(!n){ toast('Skriv et visningsnavn'); return; }
+    profile = {name:n, handles:{}, prefs:{blur:true, weather:true, caption:true}};
+    $('#avatarBtn').textContent = n.charAt(0).toUpperCase();
+    $('#avatarBtn').classList.remove('out');
+    renderProfile(); renderFinds(); toast('Profil oprettet');
+    return;
+  }
+  if(e.target.closest('#logOut')){
+    profile = null;
+    $('#avatarBtn').textContent = '◦'; $('#avatarBtn').classList.add('out');
+    renderProfile(); renderFinds();
+    return;
+  }
+  const pf = e.target.closest('[data-pref]');
+  if(pf && profile){
+    const k = pf.dataset.pref;
+    profile.prefs[k] = !profile.prefs[k];
+    pf.setAttribute('aria-checked', profile.prefs[k]);
+  }
+});
+
+document.addEventListener('input', e=>{
+  const h = e.target.closest('[data-handle]');
+  if(h && profile) profile.handles[h.dataset.handle] = e.target.value.trim();
+});
+
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('on'), 2200);
+}
+
+/* ---------- delekortet ---------- */
+let shareFind = null, sharePlat = 'instagram', shareBlob = null;
+
+async function openShare(i){
+  if(!profile){ switchView('profil'); toast('Opret en profil for at dele'); return; }
+  shareFind = finds[i]; sharePlat = 'instagram';
+  $('#sheet').classList.add('on');
+  renderPlats();
+  await drawCard();
+  buildCaption();
+}
+
+function renderPlats(){
+  $('#plats').innerHTML = PLATFORMS.map(p=>`<button class="plat" data-plat="${p.k}"
+    style="${p.k===sharePlat?'border-color:var(--lichen)':''}">
+    <span class="pi" style="${p.k===sharePlat?'color:var(--gold)':''}">${p.ic}</span>
+    <span class="pn">${p.n}</span></button>`).join('');
+  const p = PLATFORMS.find(x=>x.k===sharePlat);
+  $('#doShareBtn').textContent = 'Del på ' + p.n;
+  $('#shareNote').textContent = p.native
+    ? p.n.toUpperCase() + ' TAGER IMOD BILLEDET VIA TELEFONENS DELEFUNKTION. PÅ COMPUTER HENTES KORTET I STEDET.'
+    : 'FACEBOOK ÅBNER I ET NYT VINDUE. TEKSTEN INDSÆTTES MANUELT.';
+}
+
+async function drawCard(){
+  const cv = $('#cardCv'), x = cv.getContext('2d');
+  const f = shareFind, W = 1080, H = 1350;
+  try { await document.fonts.ready; } catch(e){}
+
+  x.fillStyle = '#14170F'; x.fillRect(0,0,W,H);
+
+  // foto
+  if(f.photos?.length){
+    await new Promise(res=>{
+      const im = new Image();
+      im.onload = ()=>{
+        const s = Math.max(W/im.width, 900/im.height);
+        const w = im.width*s, h = im.height*s;
+        x.drawImage(im, (W-w)/2, 0, w, h);
+        res();
+      };
+      im.onerror = res; im.src = f.photos[0];
+    });
+  } else {
+    const g = x.createLinearGradient(0,0,W,900);
+    g.addColorStop(0,'#242B1D'); g.addColorStop(1,'#1C2116');
+    x.fillStyle = g; x.fillRect(0,0,W,900);
+  }
+
+  // gradient ned mod teksten
+  const fade = x.createLinearGradient(0,470,0,980);
+  fade.addColorStop(0,'rgba(20,23,15,0)'); fade.addColorStop(1,'#14170F');
+  x.fillStyle = fade; x.fillRect(0,470,W,510);
+
+  // artsnavn
+  x.fillStyle = '#EAE7DA'; x.textAlign = 'left';
+  x.font = '500 74px Fraunces, Georgia, serif';
+  x.fillText(f.art.length > 24 ? f.art.slice(0,23)+'…' : f.art, 72, 950);
+
+  // sted
+  x.fillStyle = '#9FB58C'; x.font = '500 27px "IBM Plex Mono", monospace';
+  x.fillText((profile.prefs.blur ? '~2 KM FRA ' : '') + f.spot.toUpperCase(), 74, 1000);
+
+  // vejrdata — historien
+  if(profile.prefs.weather){
+    x.strokeStyle = '#333C29'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(72,1062); x.lineTo(W-72,1062); x.stroke();
+
+    const cells = [
+      [f.snap.days + ' DAGE', 'EFTER REGN', '#E3A73C'],
+      [f.snap.r14 + ' MM',    '14 DAGE',    '#6DA9C9'],
+      [f.snap.rh + '%',       'LUFTFUGT',   '#6DA9C9'],
+      [f.snap.t + '°',        'TEMPERATUR', '#EAE7DA'],
+    ];
+    cells.forEach((c,i)=>{
+      const cx = 76 + i*236;
+      x.fillStyle = c[2]; x.font = '600 42px "IBM Plex Mono", monospace';
+      x.fillText(c[0], cx, 1132);
+      x.fillStyle = '#7C8A6E'; x.font = '400 20px "IBM Plex Mono", monospace';
+      x.fillText(c[1], cx, 1168);
+    });
+
+    // miniregnstribe
+    const w = weather[SPOTS.find(s=>s.name===f.spot)?.id] || Object.values(weather)[0];
+    if(w){
+      const bars = w.days.slice(0,15), maxP = Math.max(6,...bars.map(d=>d.precip));
+      bars.forEach((d,i)=>{
+        const bh = Math.max(3,(d.precip/maxP)*54);
+        x.fillStyle = d.precip>=5 ? '#6DA9C9' : '#3E7A96';
+        x.fillRect(76 + i*62, 1268-bh, 34, bh);
+      });
+    }
+  }
+
+  // afsender
+  x.textAlign = 'right'; x.fillStyle = '#7C8A6E';
+  x.font = '400 24px "IBM Plex Mono", monospace';
+  const h = profile.handles[sharePlat];
+  x.fillText((h ? h + '  ·  ' : '') + 'SVAMPESPOR', W-72, 1280);
+
+  cv.toBlob(b=>{ shareBlob = b; }, 'image/jpeg', .92);
+}
+
+/* ---------- billedtekst pr. platform ---------- */
+const CAP_TONE = {
+  instagram:'2-4 linjer, sanseligt og nærværende, ét linjeskift mellem hver. Slut med 5-8 danske hashtags på egen linje.',
+  facebook: 'En lille fortælling på 3-5 linjer til folk der kender dig. Ingen hashtags. Gerne et spørgsmål til sidst.',
+  tiktok:   'Én kort, fængende linje der virker som hook på under 2 sekunder, plus 4-6 hashtags. Maks 150 tegn i alt.',
+  snapchat: 'Maks 90 tegn. Rå, hurtig, som en besked til en ven. Ingen hashtags.',
+};
+
+function fallbackCap(f, plat){
+  const base = `${f.art} — dag ${f.snap.days} efter regnen.`;
+  if(plat==='snapchat') return `${base} ${f.snap.r14} mm gjorde arbejdet 🍄`;
+  if(plat==='tiktok')   return `${f.snap.r14} mm regn. ${f.snap.days} dage. Så stod den der.\n\n#svampejagt #kantarel #danmark #svampe #skovtur`;
+  if(plat==='facebook') return `${base}\n\nDer faldt ${f.snap.r14} mm over fjorten dage, og luftfugtigheden lå på ${f.snap.rh}%. Skovbunden holder regnskab, man skal bare lære at læse det.\n\nNogen der har været heldige i ${f.spot} i år?`;
+  return `${base}\n\n${f.snap.r14} mm over fjorten dage, ${f.snap.rh}% luftfugtighed. Skoven husker hver eneste byge.\n\n#svampejagt #svampe #kantarel #danskskov #efterår #foraging #${f.spot.toLowerCase().replace(/\s/g,'')}`;
+}
+
+async function buildCaption(){
+  const f = shareFind, p = PLATFORMS.find(x=>x.k===sharePlat);
+  const setCap = t => {
+    $('#capText').textContent = t;
+    $('#capMeta').textContent = p.n + ' · tone tilpasset';
+    $('#capLen').textContent = t.length + ' / ' + p.max + ' tegn';
+  };
+
+  if(!profile.prefs.caption){ setCap(fallbackCap(f, sharePlat)); return; }
+  $('#capText').textContent = 'Skriver…';
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:400, messages:[{role:'user',
+        content:`Skriv en billedtekst på dansk til et opslag om et svampefund. Svar KUN med selve teksten, ingen forklaring, ingen anførselstegn.
+
+Fundet: ${f.art}, ${f.ant} stk, ${f.hab}, ${profile.prefs.blur ? 'omkring '+f.spot : f.spot}.
+Vejret: det regnede ${f.snap.r14} mm over fjorten dage, fundet kom ${f.snap.days} dage efter regnen, luftfugtighed ${f.snap.rh}%, ${f.snap.t}°.
+${f.note ? 'Samlerens egen note: '+f.note : ''}
+
+Platform: ${p.n}. ${CAP_TONE[sharePlat]}
+Vinklen skal være vejret som forklaring på fundet — det er det, der gør historien værd at dele. Skriv jordnært og konkret, ingen svulstige naturklichéer, ingen udråbstegn. Udtal dig aldrig om, at svampen kan spises.`}]})
+    });
+    if(!res.ok) throw new Error();
+    const d = await res.json();
+    setCap(d.content.filter(c=>c.type==='text').map(c=>c.text).join('').trim());
+  }catch(e){ setCap(fallbackCap(f, sharePlat)); }
+}
+
+/* ---------- deling ---------- */
+document.addEventListener('click', async e=>{
+  const sh = e.target.closest('[data-share]');
+  if(sh){ openShare(+sh.dataset.share); return; }
+  if(e.target.closest('#sheetX') || e.target.id==='sheet'){ $('#sheet').classList.remove('on'); return; }
+
+  const pl = e.target.closest('[data-plat]');
+  if(pl){ sharePlat = pl.dataset.plat; renderPlats(); await drawCard(); buildCaption(); return; }
+
+  if(e.target.closest('#copyCap')){
+    try{ await navigator.clipboard.writeText($('#capText').textContent); toast('Tekst kopieret'); }
+    catch(err){ toast('Kunne ikke kopiere — markér teksten manuelt'); }
+    return;
+  }
+});
+
+/* det egentlige delekald: filen sendes til telefonens delefunktion */
+async function doShare(){
+  const cap = $('#capText').textContent;
+  const file = shareBlob ? new File([shareBlob], 'svampespor.jpg', {type:'image/jpeg'}) : null;
+  if(file && navigator.canShare?.({files:[file]})){
+    try{ await navigator.share({files:[file], text:cap}); return; }catch(e){ if(e.name==='AbortError') return; }
+  }
+  if(sharePlat==='facebook'){
+    window.open('https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fsvampespor.dk', '_blank', 'noopener');
+    toast('Teksten skal indsættes i Facebook');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = $('#cardCv').toDataURL('image/jpeg', .92);
+  a.download = 'svampespor-' + shareFind.art.toLowerCase().replace(/\s/g,'-') + '.jpg';
+  a.click();
+  toast('Kortet er hentet — åbn ' + PLATFORMS.find(p=>p.k===sharePlat).n + ' og vælg det');
+}
+document.addEventListener('click', e=>{
+  if(e.target.closest('#doShareBtn')) doShare();
+});
+
+/* ==========================================================
+   PROGNOSEUSIKKERHED
+   En nedbørsprognose er rimelig to døgn frem og bliver hurtigt
+   løs derefter. I stedet for at lade som om dag 6 er et tal,
+   regner vi to scenarier — tør og våd — og viser spændet.
+   ========================================================== */
+const LEAD = [            // lead: [tørt scenarie, vådt scenarie, tillid]
+  [1.00, 1.00, 1.00],     // 0 — målt, ikke prognose
+  [0.85, 1.15, 1.00],
+  [0.70, 1.32, 0.97],
+  [0.55, 1.52, 0.92],
+  [0.42, 1.78, 0.85],
+  [0.30, 2.05, 0.76],
+  [0.20, 2.30, 0.68],
+  [0.14, 2.55, 0.60],
+];
+const leadOf = n => LEAD[Math.min(n, LEAD.length-1)];
+
+function projectedRange(idx, days, todayIdx, art){
+  const lead = idx - todayIdx;
+  const mid = scoreFor(idx, days, art);
+  if(lead <= 0) return {mid, lo:mid, hi:mid, lead:0, trust:1, w:mid, conf:'målt', spread:0};
+
+  const [dry, wet, trust] = leadOf(lead);
+  const scale = f => days.map((d,i)=> i > todayIdx ? {...d, precip: d.precip*f} : d);
+  let lo = Math.min(scoreFor(idx, scale(dry), art), mid);
+  let hi = Math.max(scoreFor(idx, scale(wet), art), mid);
+
+  // Selv når regnen allerede er faldet, er luftfugtighed og temperatur
+  // stadig prognose. Et lille gulv, så tallet ikke ser skarpere ud end det er.
+  const floor = Math.round((1-trust) * mid * 0.6);
+  lo = Math.max(0, Math.min(lo, mid - floor));
+  hi = Math.min(100, Math.max(hi, mid + floor));
+
+  const conf = lead <= 2 ? 'sikker' : lead <= 4 ? 'usikker' : 'løs prognose';
+  return {mid, lo, hi, lead, trust, w: mid*trust, conf, spread: hi-lo};
+}
+
+const leadConf = n => n <= 2 ? 'sikker' : n <= 4 ? 'usikker' : 'løs prognose';
+
+/* Et spænd skrives kun ud, når det faktisk er bredt nok til at betyde noget */
+function rangeTxt(r){
+  if(r.lead === 0 || r.spread < 6) return `<span class="proj">${r.mid}</span>`;
+  return `<span class="proj">${r.lo}–${r.hi}</span>`;
+}
+
+
+function forward(w, a, art){
+  const {days, todayIdx} = w;
+  const dn = i => DAYS_FULL[new Date(days[i].date+'T12:00:00').getDay()];
+
+  let nextRain = -1;
+  for(let i=todayIdx+1;i<days.length;i++){ if(days[i].precip>=5){ nextRain=i; break; } }
+
+  const ds = a.daysSince, [lo,hi] = art.window;
+
+  // før vinduet — den vigtigste besked
+  if(ds !== null && ds < lo){
+    const d = lo - ds;
+    const r = projectedRange(todayIdx + d, days, todayIdx, art);
+    return {cls:'rising', conf:r.conf,
+      txt: `rykker ind i vinduet om ${d} ${d===1?'dag':'dage'} · ${rangeTxt(r)}`};
+  }
+
+  // i vinduet, men toppen ligger forude
+  if(ds !== null && ds >= lo && ds <= hi && a.best.i > todayIdx){
+    const r = projectedRange(a.best.i, days, todayIdx, art);
+    return {cls:'peak', conf:r.conf, txt: `topper ${dn(a.best.i)} · ${rangeTxt(r)}`};
+  }
+
+  // i vinduet med toppen bag sig — tæl ned til det lukker
+  if(ds !== null && ds >= lo && ds <= hi){
+    const left = hi - ds;
+    return {cls:'peak', conf:'målt', txt: left === 0 ? 'sidste dag i vinduet'
+      : `vinduet lukker om ${left} ${left===1?'dag':'dage'}`};
+  }
+
+  // efter vinduet — er der ny regn på vej?
+  if(ds !== null && ds > hi){
+    if(nextRain >= 0){
+      const nyt = nextRain + lo - todayIdx;
+      return {cls:'rising', conf: leadConf(nextRain - todayIdx),
+        txt: `regn ${dn(nextRain)} · nyt vindue om ${nyt} dage`};
+    }
+    return {cls:'', conf:'målt', txt: `vinduet lukkede for ${ds-hi} ${ds-hi===1?'dag':'dage'} siden`};
+  }
+
+  // slet ingen regnhændelse
+  if(nextRain >= 0) return {cls:'rising', conf: leadConf(nextRain - todayIdx),
+    txt: `regn ${dn(nextRain)} · vindue om ${nextRain + lo - todayIdx} dage`};
+  return {cls:'', conf:'målt', txt:'venter på regn'};
+}
+
+/* ==========================================================
+   STEDER: relationer og rangering
+   ========================================================== */
+let relations = {           // spotId -> 'pinned' | 'followed' | 'hidden'
+  dyrehaven:'pinned', gribskov:'pinned', rude:'followed', tisvilde:'followed', vestskoven:'followed'
+};
+let segment = 'idag';       // 'idag' | 'mine'
+let targetArt = 0;
+let showHidden = false;
+
+const rel = id => relations[id] || null;
+
+/* rejsetid → faktor. 20 min ≈ 1,0 · 60 min ≈ 0,6 · 120 min ≈ 0,3 */
+function distFactor(min){ return Math.max(.25, Math.min(1, 1.12 - Math.pow(min/100, .9))); }
+
+/* dit eget spor på stedet: fund af netop denne art vejer tungest */
+function histFactor(spot, art){
+  const here = finds.filter(f=>f.spot===spot.name);
+  const same = here.filter(f=>f.art===art.n);
+  if(here.length === 0) return {f: habFactor(spot,art), why:null, cold:true};
+  const f = Math.min(1.55, 1 + same.length*.14 + (here.length-same.length)*.05);
+  return {f, why: same.length ? `${same.length} tidligere ${same.length===1?'fund':'fund'}` : `${here.length} fund i alt`, cold:false};
+}
+
+/* uden historik afgør voksestedet — det er sådan appen undgår at være tom den første uge */
+function habFactor(spot, art){
+  const want = ART_HAB[art.n] || [];
+  if(!want.length) return 1;
+  const hit = spot.hab.filter(h=>want.includes(h)).length;
+  return 1 + Math.min(.28, hit*.11);
+}
+
+/* var du der lige? så er stedet tømt, uanset hvad vejret siger */
+function satPenalty(spot){
+  const last = finds.filter(f=>f.spot===spot.name)
+                    .map(f=>(TODAY - new Date(f.date+'T12:00:00'))/864e5)
+                    .sort((a,b)=>a-b)[0];
+  if(last === undefined || last > 8) return {p:0, days:null};
+  return {p: Math.round(26 * (1 - last/8)), days: Math.round(last)};
+}
+
+async function rankSpots(){
+  const art = ARTER[targetArt];
+  const out = [];
+  for(const s of SPOTS){
+    if(rel(s.id)==='hidden' && !showHidden) continue;
+    const w = await loadWeather(s);
+    const a = analyse(w, art);
+    const d = distFactor(s.min);
+    const h = histFactor(s, art);
+    const sat = satPenalty(s);
+    const nov = (finds.some(f=>f.spot===s.name) ? 0 : 6);
+    const score = Math.max(0, Math.round(a.score * d * h.f + nov - sat.p));
+
+    const whys = [];
+    if(a.daysSince !== null && a.daysSince >= art.window[0] && a.daysSince <= art.window[1])
+      whys.push(['good', `dag ${a.daysSince} i vinduet`]);
+    else if(a.daysSince !== null) whys.push(['', `dag ${a.daysSince} efter regn`]);
+    whys.push(['', `${s.min} min`]);
+    if(h.why) whys.push(['hist', h.why]);
+    else if(h.f > 1.05) whys.push(['', 'voksested passer']);
+    if(nov) whys.push(['', 'aldrig besøgt']);
+    if(sat.p) whys.push(['bad', `du var her for ${sat.days} d siden`]);
+
+    out.push({spot:s, score, base:a.score, a, whys, fw: forward(w, a, art), rel:rel(s.id)});
+  }
+  out.sort((x,y)=> y.score - x.score);
+  return out;
+}
+
+function rankRow(r, i, showNum){
+  const b = band(r.score);
+  const p = r.rel === 'pinned';
+  return `<div class="rank">
+    ${showNum ? `<div class="rank-n ${i===0?'top':''}">${i+1}</div>` : ''}
+    <div class="rank-body" data-spot="${r.spot.id}" role="button" tabindex="0">
+      <div class="rank-title"><b>${r.spot.name}</b>
+        <span class="sc" style="color:${b.c}">${r.score}</span></div>
+      <div class="rank-sub">${r.spot.sub} · ${r.a.r14.toFixed(0)} mm / 14 d</div>
+      <div class="whys">${r.whys.map(w=>`<span class="why ${w[0]}">${w[1]}</span>`).join('')}</div>
+      ${r.fw ? `<div class="rank-fw ${r.fw.cls}">${r.fw.txt}${
+        r.fw.conf && r.fw.conf !== 'sikker' && r.fw.conf !== 'målt'
+          ? `<span class="conf ${r.fw.conf==='løs prognose'?'loose':''}">${r.fw.conf}</span>` : ''
+      }</div>` : ''}
+    </div>
+    <div class="rank-acts">
+      <button class="pinbtn ${p?'on':''}" data-rel="pinned" data-id="${r.spot.id}"
+        title="${p?'Frigør':'Fastgør øverst'}" aria-label="Fastgør ${r.spot.name}">${p?'★':'☆'}</button>
+      <button class="pinbtn hide ${r.rel==='hidden'?'on':''}" data-rel="hidden" data-id="${r.spot.id}"
+        title="Skjul stedet" aria-label="Skjul ${r.spot.name}">−</button>
+    </div>
+  </div>`;
+}
+
+async function spotPanel(){
+  const ranked = await rankSpots();
+  const pinned = SPOTS.filter(s=>rel(s.id)==='pinned').length;
+
+  const segHtml = `<div class="seg">
+      <button data-seg="idag" aria-pressed="${segment==='idag'}">I dag</button>
+      <button data-seg="mine" aria-pressed="${segment==='mine'}">Mine steder</button>
+    </div>
+    <div class="hunt">
+      <label for="tArt">Jager</label>
+      <select id="tArt">${ARTER.map((a,i)=>`<option value="${i}" ${i===targetArt?'selected':''}>${a.n}</option>`).join('')}</select>
+    </div>`;
+
+  if(segment === 'idag'){
+    const top = ranked.filter(r=>r.rel!=='hidden').slice(0,6);
+    return segHtml + `<div class="panel">
+      <div class="panel-label"><span>Bedst i dag — ${ARTER[targetArt].n}</span><span>${ARTER[targetArt].window[0]}-${ARTER[targetArt].window[1]} d</span></div>
+      ${top.map((r,i)=>rankRow(r,i,true)).join('')}
+      <button class="link-btn" data-seg="mine">Se kun mine steder →</button>
+    </div>`;
+  }
+
+  const pin = ranked.filter(r=>r.rel==='pinned');
+  const fol = ranked.filter(r=>r.rel==='followed');
+  const hid = ranked.filter(r=>r.rel==='hidden');
+
+  return segHtml + `<div class="panel">
+    ${pin.length ? `<div class="grp-label">Fastgjort — ${pin.length}/5</div>${pin.map((r,i)=>rankRow(r,i,false)).join('')}` : ''}
+    ${fol.length ? `<div class="grp-label">Fulgt</div>${fol.map((r,i)=>rankRow(r,i,false)).join('')}` : ''}
+    ${!pin.length && !fol.length ? `<div class="empty">Ingen steder endnu. Fastgør dem, du vender tilbage til.</div>` : ''}
+    ${hid.length && showHidden ? `<div class="grp-label">Skjult</div>${hid.map((r,i)=>rankRow(r,i,false)).join('')}` : ''}
+    ${hid.length ? `<button class="link-btn" id="togHid">${showHidden?'Skjul de fravalgte':`Vis ${hid.length} fravalgte`}</button>` : ''}
+  </div>`;
+}
+
+document.addEventListener('click', async e=>{
+  const sg = e.target.closest('[data-seg]');
+  if(sg){ segment = sg.dataset.seg; renderJagt(); return; }
+  if(e.target.closest('#togHid')){ showHidden = !showHidden; renderJagt(); return; }
+
+  const rb = e.target.closest('[data-rel]');
+  if(rb){
+    e.stopPropagation();
+    const id = rb.dataset.id, want = rb.dataset.rel;
+    if(rel(id) === want){
+      relations[id] = 'followed';
+    } else if(want === 'pinned'){
+      if(SPOTS.filter(s=>rel(s.id)==='pinned').length >= 5 && rel(id)!=='pinned'){
+        toast('Maks fem fastgjorte — frigør et først'); return;
+      }
+      relations[id] = 'pinned';
+    } else {
+      relations[id] = 'hidden';
+    }
+    renderChips(); renderJagt();
+  }
+});
+
+document.addEventListener('change', e=>{
+  if(e.target.id === 'tArt'){ targetArt = +e.target.value; renderJagt(); }
+});
+
+/* ---------- boot ---------- */
+(async function(){
+  renderChips(); renderArtSelect(); renderShots(); renderFinds(); renderInsight(); renderFeed();
+  await renderJagt();
+})();
+</script>
+</body>
+</html>
