@@ -70,6 +70,39 @@ supabase functions deploy billedtekst
 Al domænelogik i `src/lib/` er ren og testbar — ingen DOM, ingen fetch. Det er bevidst:
 modellen er projektets egentlige værdi, og den skal kunne verificeres uden en browser.
 
+### Auth (Google/Apple + magic-link)
+
+Login går gennem Supabase Auth. Koden understøtter Google, Apple og e-mail magic-link
+(`src/lib/auth/auth.ts`) — men selve udbyderne skal aktiveres i Supabase Dashboard, det
+kan ikke gøres fra kommandolinjen eller af en assistent, da det kræver en OAuth-klient
+og en hemmelighed fra udbyderens eget dashboard.
+
+**Uanset udbyder** — under **Authentication → URL Configuration** i Supabase Dashboard,
+tilføj din lokale og fremtidige produktions-URL til **Redirect URLs**:
+
+```
+http://localhost:5173
+https://dit-domæne.dk
+```
+
+Uden det fejler både OAuth-redirect og magic-link-e-mails med en URL-mismatch-fejl.
+
+**Google** (gratis, ingen betalt konto):
+1. Opret et projekt i [Google Cloud Console](https://console.cloud.google.com), og en
+   OAuth-klient under **APIs & Services → Credentials** (type: Web application).
+2. Authorized redirect URI: `https://<dit-projekt-ref>.supabase.co/auth/v1/callback`.
+3. I Supabase Dashboard: **Authentication → Providers → Google** — sæt Client ID og
+   Client Secret fra Google Cloud Console, og slå provideren til.
+
+**Apple** kræver et betalt Apple Developer-medlemskab (99 USD/år) samt en Services ID,
+en genereret privat nøgle og domæneverificering i Apple's eget dashboard — se
+[Supabase's Apple-guide](https://supabase.com/docs/guides/auth/social-login/auth-apple).
+Koden er klar (samme `authWithApple()`-kald som Google), men kan først bruges, når
+provideren er aktiveret i Supabase Dashboard.
+
+**Magic-link** kræver ingen ekstern opsætning — virker med det samme, så længe
+redirect-URL'en ovenfor er sat.
+
 ---
 
 ## Modellen kort
