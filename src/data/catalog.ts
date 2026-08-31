@@ -9,7 +9,7 @@
  * forvekslingstekst — uden at forurene den rene model.
  */
 
-import type { Species } from '../lib/weather/model';
+import type { Season as ModelSeason, Species } from '../lib/weather/model';
 import type { Spot } from '../lib/spots/ranking';
 
 /** Risikoniveau styrer hvor kraftigt UI'et advarer. */
@@ -19,21 +19,11 @@ export type Risk = 'low' | 'med' | 'high';
  * Kalendersæson — måneder (1-12), ikke dage efter regn.
  *
  * Hentet fra Danmarks Svampeatlas' egen "Udbredelse og fænologi"-linje pr.
- * art (se `sourceUrl`), ikke gættet. `core` er hovedsæsonen atlasset angiver
- * uden parentes; `extended` inkluderer de yderpunkter, atlasset selv sætter
- * i parentes (fx "(maj-) juni-oktober (-december)" → core jun-okt,
- * extended maj-dec).
- *
- * BEMÆRK: modellen i `src/lib/weather/model.ts` bruger dette felt ENDNU
- * IKKE — `scoreFor` kender kun dage-efter-regn, ikke kalendermåned. Et
- * regnskyl i januar kan i dag give kantarel et højt indeks, selvom arten
- * reelt ikke bryder frem om vinteren. Se docs/species.md.
+ * art (se `sourceUrl`), ikke gættet. `core`/`extended` er selve modellens
+ * `Season`-form (`seasonFactor` i model.ts dæmper `scoreFor` ud fra dem);
+ * `sourceUrl` er ren katalog-metadata, ikke noget den rene model kender til.
  */
-export interface Season {
-  /** Måneder hvor arten typisk topper. */
-  core: number[];
-  /** Fuldt interval, inkl. sjældnere yderpunkter — core er en delmængde. */
-  extended: number[];
+export interface Season extends ModelSeason {
   /** Kildehenvisning til artens taxon-side på Danmarks Svampeatlas. */
   sourceUrl: string;
 }

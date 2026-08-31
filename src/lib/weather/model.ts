@@ -25,6 +25,18 @@ export interface WeatherSeries {
   todayIdx: number;
 }
 
+/**
+ * Kalendersæson — måneder (1-12), hentet fra Danmarks Svampeatlas'
+ * fænologiangivelse pr. art (se docs/species.md). `core` er den udokumenterede
+ * hovedsæson; `extended` inkluderer de yderpunkter, atlasset selv angiver i
+ * parentes (fx "(maj-) juni-oktober (-december)" → core jun-okt, extended
+ * maj-dec). `core` er en delmængde af `extended`.
+ */
+export interface Season {
+  core: number[];
+  extended: number[];
+}
+
 export interface Species {
   nameDa: string;
   nameLat: string;
@@ -34,6 +46,8 @@ export interface Species {
   rainMm: number;
   /** voksesteder arten søger — bruges til cold start i rangeringen */
   habitats: string[];
+  /** Valgfri: mangler den, dæmper scoreFor ikke efter kalendermåned. */
+  season?: Season;
 }
 
 /** En regnhændelse tæller fra denne døgnmængde */
@@ -52,13 +66,46 @@ export function lastRainEvent(days: DayWeather[], idx: number): number {
   return -1;
 }
 
+/** Cirkulær afstand mellem to måneder (1-12), i måneder — 0 til 6. */
+function monthDistance(a: number, b: number): number {
+  const diff = Math.abs(a - b) % 12;
+  return Math.min(diff, 12 - diff);
+}
+
 /**
- * Indeks 0-100 for en given dag. Fem komponenter:
+ * Kalenderdæmpning 0-1 — hvor sandsynligt er det overhovedet, at arten
+ * bryder frem i denne måned, uanset hvor godt regnen ellers passer?
+ *
+ * 1 inden for kernesæsonen, aftagende gaussisk udenfor — aldrig helt nul,
+ * for fænologien i Svampeatlas er en tendens, ikke en garanti. Bredden (σ)
+ * afledes af, hvor meget "hale" arten selv har i extended ift. core: jo
+ * mere Svampeatlas dokumenterer som muligt uden for hovedsæsonen (fx
+ * kantarellens brede "(maj-) …(-december)"), jo blødere er overgangen. En
+ * art uden dokumenteret hale (fx østershat, hvor extended = core) får en
+ * markant skarpere afgrænsning.
+ *
+ * Ingen `season` på arten ⇒ ingen dæmpning (1) — bevidst bagudkompatibel,
+ * så ældre eller ad hoc-konstruerede arter ikke kræver sæsondata.
+ */
+export function seasonFactor(month: number, season: Season | undefined): number {
+  if (!season || season.core.length === 0) return 1;
+  const FLOOR = 0.15;
+  const d = Math.min(...season.core.map((m) => monthDistance(month, m)));
+  if (d === 0) return 1;
+  const tail = Math.max(0, season.extended.length - season.core.length);
+  const sigma = 1 + tail * 0.4;
+  return FLOOR + (1 - FLOOR) * Math.exp(-(d * d) / (2 * sigma * sigma));
+}
+
+/**
+ * Indeks 0-100 for en given dag. Fem komponenter, ganget med en
+ * kalenderdæmpning til sidst:
  *   42  position i artens modningsvindue (gaussisk om optimum)
  *   24  nedbørsmængde i hændelsen, målt mod artens behov
  *   15  luftfugtighed seneste tre døgn
  *   12  temperatur, optimum ~14 °C
  *    7  jordfugt i topjorden
+ *   ×   sæsonfaktor (0,15-1) — se seasonFactor
  */
 export function scoreFor(idx: number, days: DayWeather[], sp: Species): number {
   const past = days.slice(0, idx + 1);
@@ -86,7 +133,9 @@ export function scoreFor(idx: number, days: DayWeather[], sp: Species): number {
   const soil = mean(past.slice(-2).map((d) => d.soil ?? 0.2));
   const soilScore = 7 * clamp((soil - 0.15) / 0.2);
 
-  return Math.round(clamp(windowScore + rainScore + rhScore + tScore + soilScore, 0, 100));
+  const raw = clamp(windowScore + rainScore + rhScore + tScore + soilScore, 0, 100);
+  const month = Number(days[idx].date.slice(5, 7));
+  return Math.round(clamp(raw * seasonFactor(month, sp.season), 0, 100));
 }
 
 /* ------------------------------------------------------------------ */

@@ -31,8 +31,9 @@
 
 ## Fase 4 — det der gør den til din
 - [x] Sæsondata pr. art hentet fra Svampeatlas, dokumenteret i `docs/species.md` — se dér for det vigtigste fund: modellen har ingen kalenderspærre endnu
-- [ ] Koble `season` ind i `scoreFor` som en dæmpende faktor uden for kernesæsonen (kræver bevidst testopdatering, jf. CLAUDE.md)
+- [x] `season` koblet ind i `scoreFor` som en gaussisk dæmpende faktor (`seasonFactor`, 0,15-1) uden for kernesæsonen — 7 nye tests, verificeret med rigtige vejrdata (Østershat 17 vs. Kantarel 51, samme dag/sted, 31/8-2026)
 - [ ] Kalibrering af regnbaserede modningsvinduer (`window`, `rainMm`) mod Svampeatlas — kræver reel fund-vs-vejr-korrelation, ikke kun fænologitekst
+- [ ] Rigtig frost-trigger til østershat (kalendersæson er en tilnærmelse, ikke det samme som at måle frost)
 - [ ] Personlige mønstre: dine egne fund mod vejret
 - [ ] Notifikation når vinduet åbner på et fastgjort sted
 - [ ] Artspecifik temperaturrespons

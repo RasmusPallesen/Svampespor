@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  scoreFor, project, read, band, lastRainEvent,
+  scoreFor, project, read, band, lastRainEvent, seasonFactor,
   type DayWeather, type Species, type WeatherSeries,
 } from './model';
 
@@ -17,12 +17,14 @@ const TRAGT: Species = {
 function series(opts: {
   eventDay?: number; eventMm?: number; rh?: number; tmax?: number;
   soil?: number; fc?: number; fcRainDay?: number; fcRainMm?: number;
+  /** Startdato — kun brugt af sæsontests, der skal flytte "i dag" til en anden måned. */
+  start?: Date;
 }): WeatherSeries {
   const { eventDay, eventMm = 16, rh = 85, tmax = 16, soil = 0.28,
-          fc = 6, fcRainDay, fcRainMm = 12 } = opts;
+          fc = 6, fcRainDay, fcRainMm = 12, start = new Date(Date.UTC(2026, 7, 11)) } = opts;
   const days: DayWeather[] = [];
   for (let i = 0; i < 15 + fc; i++) {
-    const d = new Date(Date.UTC(2026, 7, 11));
+    const d = new Date(start);
     d.setUTCDate(d.getUTCDate() + i);
     let precip = 0;
     if (eventDay !== undefined && i === eventDay) precip = eventMm;
@@ -93,6 +95,65 @@ describe('scoreFor', () => {
       expect(s).toBeGreaterThanOrEqual(0);
       expect(s).toBeLessThanOrEqual(100);
     }
+  });
+
+  it('rører ikke arter uden sæsondata — samme regn, samme resultat uanset kalendermåned', () => {
+    // KANTAREL har ingen `season`. Flytter man "i dag" fra august til januar
+    // med præcis samme regnmønster, skal scoren være identisk: seasonFactor
+    // skal falde tilbage til 1 (ingen dæmpning), aldrig stiltiende ændre noget.
+    const august = series({ eventDay: 7, start: new Date(Date.UTC(2026, 7, 1)) });
+    const january = series({ eventDay: 7, start: new Date(Date.UTC(2026, 0, 1)) });
+    expect(scoreFor(14, august.days, KANTAREL)).toBe(scoreFor(14, january.days, KANTAREL));
+  });
+
+  it('dæmper indekset uden for sæson for arter med sæsondata', () => {
+    // Samme regnhændelse-timing (dag 7, midt i vinduet) og samme rh/temp i
+    // begge scenarier — kun kalendermåneden for "i dag" er forskellig.
+    const seasonal: Species = {
+      ...KANTAREL,
+      season: { core: [6, 7, 8, 9, 10], extended: [5, 6, 7, 8, 9, 10, 11, 12] },
+    };
+    const august = series({ eventDay: 7, start: new Date(Date.UTC(2026, 7, 1)) });
+    const january = series({ eventDay: 7, start: new Date(Date.UTC(2026, 0, 1)) });
+    const inSeason = scoreFor(14, august.days, seasonal);
+    const outOfSeason = scoreFor(14, january.days, seasonal);
+    expect(outOfSeason).toBeLessThan(inSeason);
+  });
+});
+
+describe('seasonFactor', () => {
+  it('er 1 uden sæsondata — bagudkompatibelt', () => {
+    expect(seasonFactor(1, undefined)).toBe(1);
+  });
+
+  it('er 1 inden for kernesæsonen', () => {
+    const season = { core: [6, 7, 8, 9, 10], extended: [5, 6, 7, 8, 9, 10, 11, 12] };
+    expect(seasonFactor(8, season)).toBe(1);
+  });
+
+  it('dæmper blødere inden for extended end helt udenfor, men aldrig til nul', () => {
+    const season = { core: [6, 7, 8, 9, 10], extended: [5, 6, 7, 8, 9, 10, 11, 12] };
+    const inExtended = seasonFactor(12, season); // december: extended, ikke core
+    const farOutside = seasonFactor(2, season); // februar: langt fra begge
+    expect(inExtended).toBeLessThan(1);
+    expect(inExtended).toBeGreaterThan(farOutside);
+    expect(farOutside).toBeGreaterThan(0);
+  });
+
+  it('dæmper hurtigere for arter uden dokumenteret "hale" i extended', () => {
+    // Samme cirkulære afstand (2 måneder) fra kernesæsonen for begge, men
+    // narrow har ingen yderpunkter (som østershat), wide har en bred hale
+    // (som kantarel) — wide skal dæmpe mærkbart blødere ved samme afstand.
+    const narrow = { core: [6], extended: [6] };
+    const wide = { core: [6], extended: [3, 4, 5, 6, 7, 8, 9] };
+    expect(seasonFactor(8, wide)).toBeGreaterThan(seasonFactor(8, narrow));
+  });
+
+  it('håndterer årsskiftet korrekt (fx østershat: okt-mar)', () => {
+    const winter = { core: [10, 11, 12, 1, 2, 3], extended: [10, 11, 12, 1, 2, 3] };
+    expect(seasonFactor(12, winter)).toBe(1);
+    expect(seasonFactor(1, winter)).toBe(1);
+    expect(seasonFactor(7, winter)).toBeLessThan(0.3); // midsommer — modsat sæson
   });
 });
 
