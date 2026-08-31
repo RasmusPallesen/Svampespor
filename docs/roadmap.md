@@ -30,7 +30,9 @@
 - [ ] Delekort som canvas-billede + Web Share API
 
 ## Fase 4 — det der gør den til din
-- [ ] Kalibrering af modningsvinduer mod Svampeatlas
+- [x] Sæsondata pr. art hentet fra Svampeatlas, dokumenteret i `docs/species.md` — se dér for det vigtigste fund: modellen har ingen kalenderspærre endnu
+- [ ] Koble `season` ind i `scoreFor` som en dæmpende faktor uden for kernesæsonen (kræver bevidst testopdatering, jf. CLAUDE.md)
+- [ ] Kalibrering af regnbaserede modningsvinduer (`window`, `rainMm`) mod Svampeatlas — kræver reel fund-vs-vejr-korrelation, ikke kun fænologitekst
 - [ ] Personlige mønstre: dine egne fund mod vejret
 - [ ] Notifikation når vinduet åbner på et fastgjort sted
 - [ ] Artspecifik temperaturrespons

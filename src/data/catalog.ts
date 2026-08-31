@@ -15,10 +15,34 @@ import type { Spot } from '../lib/spots/ranking';
 /** Risikoniveau styrer hvor kraftigt UI'et advarer. */
 export type Risk = 'low' | 'med' | 'high';
 
+/**
+ * Kalendersæson — måneder (1-12), ikke dage efter regn.
+ *
+ * Hentet fra Danmarks Svampeatlas' egen "Udbredelse og fænologi"-linje pr.
+ * art (se `sourceUrl`), ikke gættet. `core` er hovedsæsonen atlasset angiver
+ * uden parentes; `extended` inkluderer de yderpunkter, atlasset selv sætter
+ * i parentes (fx "(maj-) juni-oktober (-december)" → core jun-okt,
+ * extended maj-dec).
+ *
+ * BEMÆRK: modellen i `src/lib/weather/model.ts` bruger dette felt ENDNU
+ * IKKE — `scoreFor` kender kun dage-efter-regn, ikke kalendermåned. Et
+ * regnskyl i januar kan i dag give kantarel et højt indeks, selvom arten
+ * reelt ikke bryder frem om vinteren. Se docs/species.md.
+ */
+export interface Season {
+  /** Måneder hvor arten typisk topper. */
+  core: number[];
+  /** Fuldt interval, inkl. sjældnere yderpunkter — core er en delmængde. */
+  extended: number[];
+  /** Kildehenvisning til artens taxon-side på Danmarks Svampeatlas. */
+  sourceUrl: string;
+}
+
 export interface CatalogSpecies extends Species {
   risk: Risk;
   /** Forvekslingstekst — kan indeholde <b>…</b>. Vises altid ved artsvalg. */
   warn: string;
+  season: Season;
 }
 
 /**
@@ -54,36 +78,58 @@ export const SPECIES: CatalogSpecies[] = [
     nameDa: 'Kantarel', nameLat: 'Cantharellus cibarius', risk: 'low',
     window: [5, 9], rainMm: 14, habitats: ['bøg', 'mos', 'løv', 'sur'],
     warn: 'Forveksles med falsk kantarel og olivenbrun kantarelrørhat. Tjek de nedløbende <b>ribber</b> — ikke ægte lameller — og den svage abrikoslugt.',
+    // Svampeatlas: "(maj-) juni-oktober (-december)"
+    season: { core: [6, 7, 8, 9, 10], extended: [5, 6, 7, 8, 9, 10, 11, 12], sourceUrl: 'https://svampe.databasen.org/taxon/11317' },
   },
   {
     nameDa: 'Spiselig rørhat (Karl Johan)', nameLat: 'Boletus edulis', risk: 'low',
     window: [6, 11], rainMm: 18, habitats: ['gran', 'bøg', 'mos', 'gammelskov'],
     warn: 'Forveksles med galderørhat, som er ubrugelig af bitterhed. Rør-laget er hvidt til gulgrønt hos Karl Johan, lyserødt hos galderørhatten.',
+    // Svampeatlas: "(juni-) juli-oktober (november)"
+    season: { core: [7, 8, 9, 10], extended: [6, 7, 8, 9, 10, 11], sourceUrl: 'https://svampe.databasen.org/taxon/11069' },
   },
   {
     nameDa: 'Tragtkantarel', nameLat: 'Craterellus tubaeformis', risk: 'low',
     window: [7, 13], rainMm: 16, habitats: ['gran', 'mos', 'sur', 'fyr'],
     warn: 'Få farlige forvekslinger, men vokser tit i tætte tæpper — tag kun en del af bestanden, så mycelium og fællesskab har noget til næste år.',
+    // Svampeatlas: "kan komme frem fra midt på sommeren i våde år, men den
+    // topper typisk sent på sæsonen og helt ind i vinteren"
+    season: { core: [9, 10, 11, 12], extended: [7, 8, 9, 10, 11, 12], sourceUrl: 'https://svampe.databasen.org/taxon/12753' },
   },
   {
     nameDa: 'Almindelig champignon', nameLat: 'Agaricus campestris', risk: 'high',
     window: [4, 8], rainMm: 12, habitats: ['græs', 'lysning', 'ungskov'],
     warn: '<b>Højeste agtpågivenhed.</b> Unge champignon-lignende svampe forveksles med <b>grøn fluesvamp</b> og <b>snehvid fluesvamp</b> — begge dødeligt giftige. Grav altid hele stokbasen op: en <b>tydelig pose (volva)</b> ved foden betyder fluesvamp. Champignonens lameller bliver lyserøde og siden brune; fluesvampens forbliver hvide.',
+    // Svampeatlas: "(maj-) juni-november (-december)"
+    season: { core: [6, 7, 8, 9, 10, 11], extended: [5, 6, 7, 8, 9, 10, 11, 12], sourceUrl: 'https://svampe.databasen.org/taxon/10065' },
   },
   {
     nameDa: 'Stor parasolhat', nameLat: 'Macrolepiota procera', risk: 'med',
     window: [5, 10], rainMm: 14, habitats: ['lysning', 'græs', 'løv'],
     warn: 'Forveksles med kastanieparasolhat (giftig), der er markant mindre og rødmer ved snit. Den ægte har <b>slangebroget stok</b> og en dobbelt ring, der kan skydes op og ned.',
+    // Svampeatlas: "(juni-) juli-oktober (-november)" — arten hedder officielt
+    // "Stor kæmpeparasolhat" på atlasset; "stor parasolhat" er den listede
+    // synonym fra "De danske svampenavne" (Petersen & Vesterholt).
+    season: { core: [7, 8, 9, 10], extended: [6, 7, 8, 9, 10, 11], sourceUrl: 'https://svampe.databasen.org/taxon/16660' },
   },
   {
     nameDa: 'Østershat', nameLat: 'Pleurotus ostreatus', risk: 'low',
     window: [3, 9], rainMm: 10, habitats: ['dødttræ', 'bøg', 'løv'],
     warn: 'Vokser på dødt løvtræ, typisk bøg. Kommer først for alvor efter <b>frost</b> — vejrvinduet her er et andet end for skovbundens arter.',
+    // Svampeatlas: "især oktober-marts" — eneste efterår/vinter-art i
+    // kataloget; wrapper årsskiftet, derfor listet som månedstal, ikke et
+    // fra-til-interval.
+    season: { core: [10, 11, 12, 1, 2, 3], extended: [10, 11, 12, 1, 2, 3], sourceUrl: 'https://svampe.databasen.org/taxon/18870' },
   },
   {
-    nameDa: 'Rødmende skørhat', nameLat: 'Russula vesca', risk: 'med',
+    // Atlasset kalder arten "Spiselig skørhat" (officielt navn efter "De
+    // danske svampenavne"), ikke "Rødmende skørhat" — rettet til at matche
+    // den anerkendte danske betegnelse for Russula vesca.
+    nameDa: 'Spiselig skørhat', nameLat: 'Russula vesca', risk: 'med',
     window: [5, 10], rainMm: 15, habitats: ['bøg', 'eg', 'løv'],
     warn: 'Skørhatte kræver smagsprøve-teknik: en lille bid på tungespidsen, spyttes ud. Bittert eller skarpt = lad den stå.',
+    // Svampeatlas: "juni-oktober med en toppende forekomst om sommeren"
+    season: { core: [6, 7, 8], extended: [6, 7, 8, 9, 10], sourceUrl: 'https://svampe.databasen.org/taxon/20093' },
   },
 ];
 
