@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 
 import { findSpot } from '../data/catalog';
-import { fmtWeekday, cap } from '../lib/format';
-import { band, read, type Reading, type WeatherSeries } from '../lib/weather/model';
+import { fmtWeekday, cap, monthName } from '../lib/format';
+import { band, read, seasonState, type Reading, type SeasonState, type WeatherSeries } from '../lib/weather/model';
 import { BAND_COLOR, Dial } from '../components/Dial';
 import { Regnstribe } from '../components/Regnstribe';
 import { SpotPanel } from '../components/SpotPanel';
@@ -19,7 +19,9 @@ export function JagtView() {
     return <div className="loading">{weatherReady ? 'INTET VEJR FOR STEDET' : 'LÆSER SKOVBUNDEN…'}</div>;
   }
 
-  const b = band(reading.score);
+  const todayMonth = Number(w.days[w.todayIdx].date.slice(5, 7));
+  const season = seasonState(todayMonth, targetSpecies.season);
+  const b = band(reading.score, season);
 
   return (
     <>
@@ -28,7 +30,7 @@ export function JagtView() {
           <Dial score={reading.score} color={BAND_COLOR[b.key]} />
           <div className="verdict">
             <h2 style={{ color: BAND_COLOR[b.key] }}>{b.label}</h2>
-            <p dangerouslySetInnerHTML={{ __html: rainLine(reading) }} />
+            <p dangerouslySetInnerHTML={{ __html: verdictText(reading, season) }} />
           </div>
         </div>
 
@@ -85,6 +87,11 @@ function BestDay({ reading, w }: { reading: Reading; w: WeatherSeries }) {
   );
 }
 
+/** Måneds-spandet for en sæson, i "juni-oktober"-stil — arrayet er allerede i fruiting-rækkefølge. */
+function seasonRange(months: number[]): string {
+  return `${monthName(months[0])}-${monthName(months[months.length - 1])}`;
+}
+
 function rainLine(r: Reading): string {
   if (r.daysSince === null) {
     return 'Ingen betydelig regn i de sidste 14 dage. Myceliet venter.';
@@ -94,4 +101,25 @@ function rainLine(r: Reading): string {
     `Det regnede <b>${r.eventRain.toFixed(0)} mm</b> for <b>${r.daysSince} ${dage}</b> siden. ` +
     `${r.species.nameDa} bryder typisk frem ${r.species.window[0]}-${r.species.window[1]} dage efter.`
   );
+}
+
+/**
+ * Samme rainLine som før for arter i sæson — men uden for artens
+ * dokumenterede sæson erstattes den af en sæsonforklaring, så et lavt
+ * indeks ikke fejlagtigt læses som "tør skovbund, vent på regn". I
+ * yderkanten (extended) beholdes rainLine, blot med en kort tilføjelse.
+ */
+function verdictText(r: Reading, state: SeasonState): string {
+  const sp = r.species;
+  if (state === 'outside' && sp.season) {
+    return (
+      `${sp.nameDa} har sæson <b>${seasonRange(sp.season.core)}</b> (Danmarks Svampeatlas). ` +
+      `Det er ikke sæson lige nu, så indekset holder sig lavt — uanset hvor meget det regner.`
+    );
+  }
+  const base = rainLine(r);
+  if (state === 'extended' && sp.season) {
+    return `${base} Du er i udkanten af sæsonen (${seasonRange(sp.season.extended)}) — stadig muligt, bare sjældnere.`;
+  }
+  return base;
 }
