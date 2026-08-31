@@ -33,4 +33,8 @@ export const BAND_COLOR = {
   ok: 'var(--lichen)',
   soon: 'var(--rain)',
   dry: 'var(--mute)',
+  // Samme farve som 'dry' — begge betyder "intet lige nu", men teksten
+  // (band().label) skelner: tør skovbund kan ændre sig med regn, forkert
+  // sæson kan ikke.
+  offseason: 'var(--mute)',
 } as const;

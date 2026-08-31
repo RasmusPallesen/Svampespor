@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  rankSpots, distanceFactor, habitatFactor, historyFactor, saturationPenalty,
+  rankSpots, forward, distanceFactor, habitatFactor, historyFactor, saturationPenalty,
   type Spot, type Find, type Relation,
 } from './ranking';
-import type { DayWeather, Species, WeatherSeries } from '../weather/model';
+import { read, type DayWeather, type Species, type WeatherSeries } from '../weather/model';
 
 const KANTAREL: Species = {
   nameDa: 'Kantarel', nameLat: 'Cantharellus cibarius',
@@ -95,6 +95,20 @@ describe('saturationPenalty', () => {
     const r = saturationPenalty(spot('a', 20),
       [{ spotId: 'a', species: 'Kantarel', date: '2026-08-01' }], TODAY);
     expect(r.penalty).toBe(0);
+  });
+});
+
+describe('forward', () => {
+  it('klemmer til sidste kendte dag i stedet for at indeksere ud af prognosen', () => {
+    // Fandt live: tragtkantarel har lo=7. Falder regnen på selve "i dag"
+    // (daysSince=0), peger todayIdx + (lo-0) = 21 ud over en 21-dages serie
+    // (gyldige indeks 0-20) — det crashede appen, indtil forward() klemte
+    // måltallet til days.length-1.
+    const wideWindow: Species = { ...KANTAREL, nameDa: 'Tragtkantarel', window: [7, 13] };
+    const w = series(14); // regn falder på "i dag" (indeks 14 = todayIdx)
+    const r = read(w, wideWindow);
+    expect(r.daysSince).toBe(0);
+    expect(() => forward(w, r, wideWindow)).not.toThrow();
   });
 });
 

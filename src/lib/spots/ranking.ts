@@ -110,7 +110,12 @@ export function forward(w: WeatherSeries, r: Reading, sp: Species): Forward {
 
   if (ds !== null && ds < lo) {
     const d = lo - ds;
-    const p = project(todayIdx + d, days, todayIdx, sp);
+    // Arter med et bredt vindue (høj lo, fx tragtkantarel) kan pege længere
+    // frem end prognosen rækker. Klemmer til sidste kendte dag i stedet for
+    // at indeksere ud af days — samme "tilliden falder med afstanden"-idé
+    // som project() allerede bruger til selve lead-tabellen.
+    const targetIdx = Math.min(todayIdx + d, days.length - 1);
+    const p = project(targetIdx, days, todayIdx, sp);
     return { tone: 'rising', text: `rykker ind i vinduet om ${d} ${plural(d)}`,
              projected: asRange(p), confidence: p.confidence };
   }

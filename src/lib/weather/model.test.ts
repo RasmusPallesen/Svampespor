@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  scoreFor, project, read, band, lastRainEvent, seasonFactor,
+  scoreFor, project, read, band, lastRainEvent, seasonFactor, seasonState,
   type DayWeather, type Species, type WeatherSeries,
 } from './model';
 
@@ -232,5 +232,49 @@ describe('band', () => {
     expect(band(60).key).toBe('ok');
     expect(band(40).key).toBe('soon');
     expect(band(10).key).toBe('dry');
+  });
+
+  it('bruger de score-baserede trin uændret, når season udelades — bagudkompatibelt', () => {
+    expect(band(85, 'core').key).toBe('open');
+    expect(band(10, 'core').key).toBe('dry');
+  });
+
+  it('overstyrer med "offseason", når arten er uden for sæson — uanset scoren', () => {
+    // Selv en score der ellers ville hedde "Modningsvinduet er åbent" skal
+    // læses som forkert sæson, ikke som et åbent vindue.
+    expect(band(85, 'outside').key).toBe('offseason');
+    expect(band(10, 'outside').key).toBe('offseason');
+  });
+
+  it('overstyrer IKKE i yderkanten (extended) — dæmpningen der er blød', () => {
+    expect(band(85, 'extended').key).toBe('open');
+    expect(band(10, 'extended').key).toBe('dry');
+  });
+});
+
+describe('seasonState', () => {
+  const season = { core: [6, 7, 8, 9, 10], extended: [5, 6, 7, 8, 9, 10, 11, 12] };
+
+  it('er "unknown" uden sæsondata', () => {
+    expect(seasonState(1, undefined)).toBe('unknown');
+  });
+
+  it('er "core" inden for kernesæsonen', () => {
+    expect(seasonState(8, season)).toBe('core');
+  });
+
+  it('er "extended" i yderkanten', () => {
+    expect(seasonState(12, season)).toBe('extended');
+  });
+
+  it('er "outside" uden for både core og extended', () => {
+    expect(seasonState(2, season)).toBe('outside');
+  });
+
+  it('håndterer årsskiftet (fx østershat: okt-mar)', () => {
+    const winter = { core: [10, 11, 12, 1, 2, 3], extended: [10, 11, 12, 1, 2, 3] };
+    expect(seasonState(12, winter)).toBe('core');
+    expect(seasonState(1, winter)).toBe('core');
+    expect(seasonState(7, winter)).toBe('outside');
   });
 });

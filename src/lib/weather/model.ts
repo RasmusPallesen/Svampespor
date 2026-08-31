@@ -98,6 +98,21 @@ export function seasonFactor(month: number, season: Season | undefined): number 
 }
 
 /**
+ * Kategorisk sæsontilstand for en given måned — den diskrete udgave af
+ * `seasonFactor`, til tekst frem for tal. Bruges til at afgøre, om
+ * `band()`s label skal fortælle "forkert tid på året" i stedet for at gætte
+ * ud fra et dæmpet tal alene.
+ */
+export type SeasonState = 'core' | 'extended' | 'outside' | 'unknown';
+
+export function seasonState(month: number, season: Season | undefined): SeasonState {
+  if (!season || season.core.length === 0) return 'unknown';
+  if (season.core.includes(month)) return 'core';
+  if (season.extended.includes(month)) return 'extended';
+  return 'outside';
+}
+
+/**
  * Indeks 0-100 for en given dag. Fem komponenter, ganget med en
  * kalenderdæmpning til sidst:
  *   42  position i artens modningsvindue (gaussisk om optimum)
@@ -265,9 +280,19 @@ export function read(w: WeatherSeries, sp: Species): Reading {
   };
 }
 
-export type Band = { label: string; key: 'open' | 'ok' | 'soon' | 'dry' };
+export type Band = { label: string; key: 'open' | 'ok' | 'soon' | 'dry' | 'offseason' };
 
-export function band(score: number): Band {
+/**
+ * `season` er valgfri og forudsat 'core' — så ethvert eksisterende kald
+ * `band(score)` opfører sig helt uændret. Angives 'outside' (måneden ligger
+ * uden for artens dokumenterede sæson, jf. `seasonState`), overstyres de
+ * score-baserede etiketter: et lavt tal betyder her ikke "tør skovbund,
+ * vent på regn", men "forkert tid på året, regn ændrer ikke det".
+ * 'extended' (yderkanten af sæsonen) overstyrer bevidst ikke — dæmpningen
+ * dér er blød, og et højt tal er stadig en reel, om end sjældnere, mulighed.
+ */
+export function band(score: number, season: SeasonState = 'core'): Band {
+  if (season === 'outside') return { label: 'Uden for sæson', key: 'offseason' };
   if (score >= 72) return { label: 'Modningsvinduet er åbent', key: 'open' };
   if (score >= 52) return { label: 'Værd at gå en tur', key: 'ok' };
   if (score >= 32) return { label: 'Tidligt endnu', key: 'soon' };
