@@ -33,8 +33,22 @@ hændelsesdøgnet plus de to følgende, så en byge fordelt over to dage tæller
 feltviden og skal kalibreres mod Svampeatlas' danske fund koblet med historiske
 vejrdata fra samme koordinat. Det er den vigtigste udestående opgave i projektet.
 
-Østershat er et særtilfælde: den kommer i gang efter frost snarere end efter regn,
-og modellen behandler den derfor forkert i sin nuværende form.
+### Kalendersæson
+
+De fem komponenter herover kender kun **dage efter regn** — ikke hvilken måned det
+er. Et solidt regnskyl 6 dage før i dag ville uden videre give kantarel samme indeks
+i januar som i august. Det retter `seasonFactor` (i `model.ts`): den samlede sum
+ganges til sidst med en dæmpning 0,15-1 afledt af artens `season` (hentet fra
+Danmarks Svampeatlas, se `docs/species.md`) — 1 inden for kernesæsonen, aftagende
+gaussisk udenfor, aldrig helt nul. Bredden på faldet afhænger af, hvor meget "hale"
+arten selv har dokumenteret i extended: en art med bred parentes rundt om
+kernesæsonen (fx kantarellens "(maj-) … (-december)") dæmpes blødere end en uden
+(østershat, hvor extended = core).
+
+Østershat er stadig et særtilfælde — den kommer i gang efter frost snarere end efter
+regn — men `seasonFactor` retter nu den værste symptom: den bliver ikke længere
+foreslået midt om sommeren. En rigtig frost-trigger (se "Endnu ikke bygget") er en
+separat, mere præcis mekanisme end kalendermåned alene.
 
 ## Prognoseusikkerhed
 
