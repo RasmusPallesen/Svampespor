@@ -13,11 +13,20 @@ import {
 
 import { SPECIES, SPOTS, type CatalogSpecies } from '../data/catalog';
 import { simulateWeather } from '../data/demoWeather';
+import { signInWithApple, signInWithGoogle, signInWithMagicLink, signOutAuth } from '../lib/auth/auth';
 import { getRepo } from '../lib/data/repo';
+import { getSupabase } from '../lib/data/supabaseClient';
 import type { FindInput, FindRecord, Profile, ProfilePrefs } from '../lib/data/types';
 import type { WeatherSeries } from '../lib/weather/model';
 import { fetchForSpots } from '../lib/weather/openMeteo';
 import type { Relation } from '../lib/spots/ranking';
+
+export interface AuthUser {
+  id: string;
+  email: string | null;
+  /** navn foreslået af OAuth-udbyderen — bruges til at forududfylde visningsnavn */
+  suggestedName: string | null;
+}
 
 export type Segment = 'idag' | 'mine';
 export type View = 'jagt' | 'bestem' | 'log' | 'faelles' | 'profil';
@@ -49,6 +58,13 @@ interface AppState {
   setHandle(key: string, value: string): void;
   togglePref(key: keyof ProfilePrefs): void;
 
+  /** null = ikke logget ind (kun relevant i Supabase-tilstand). */
+  authUser: AuthUser | null;
+  authReady: boolean;
+  authWithGoogle(): Promise<void>;
+  authWithApple(): Promise<void>;
+  authWithMagicLink(email: string): Promise<void>;
+
   activeSpotId: string;
   setActiveSpot(id: string): void;
 
@@ -65,6 +81,10 @@ interface AppState {
 
   sharing: boolean;
   setSharing(v: boolean): void;
+
+  /** Eksplicit samtykke til at logge præcis position ved fund (CLAUDE.md regel 3). */
+  logLocation: boolean;
+  setLogLocation(v: boolean): void;
 
   view: View;
   goto(v: View): void;
@@ -95,6 +115,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [finds, setFinds] = useState<FindRecord[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [activeSpotId, setActiveSpotId] = useState<string>(SPOTS[0].id);
   const [targetName, setTargetName] = useState<string>(SPECIES[0].nameDa);
@@ -102,6 +124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [segment, setSegment] = useState<Segment>('idag');
   const [showHidden, setShowHidden] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [logLocation, setLogLocation] = useState(false);
   const [view, setView] = useState<View>('jagt');
   const [shareFind, setShareFind] = useState<FindRecord | null>(null);
 
@@ -113,10 +136,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastTimer.current = window.setTimeout(() => setToast(null), 2200);
   }, []);
 
-  /* ---- boot: hent fund + vejr for alle steder ---- */
+  /* ---- boot + auth: hent fund/profil, og hold dem i sync med login-status ----
+   * Session-adapteren har ingen rigtig auth — hent bare med det samme. I
+   * Supabase-tilstand afgør RLS, hvad et kald ser, så et login/logout skal
+   * udløse et nyt hent af begge dele, ikke kun ved første render.
+   */
   useEffect(() => {
-    repo.listFinds().then(setFinds).catch(() => setFinds([]));
-    repo.getProfile().then(setProfile).catch(() => {});
+    const db = getSupabase();
+    const syncFindsAndProfile = () => {
+      repo.listFinds().then(setFinds).catch(() => setFinds([]));
+      repo.getProfile().then(setProfile).catch(() => setProfile(null));
+    };
+
+    if (!db) {
+      syncFindsAndProfile();
+      setAuthReady(true);
+      return;
+    }
+
+    const syncUser = (
+      u: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null | undefined,
+    ) => {
+      setAuthUser(
+        u
+          ? {
+              id: u.id,
+              email: u.email ?? null,
+              suggestedName: (u.user_metadata?.full_name as string) || (u.user_metadata?.name as string) || null,
+            }
+          : null,
+      );
+    };
+
+    db.auth.getSession().then(({ data }) => {
+      syncUser(data.session?.user);
+      syncFindsAndProfile();
+      setAuthReady(true);
+    });
+
+    const { data: sub } = db.auth.onAuthStateChange((_event, session) => {
+      syncUser(session?.user);
+      syncFindsAndProfile();
+    });
+
+    return () => sub.subscription.unsubscribe();
   }, [repo]);
 
   useEffect(() => {
@@ -162,7 +225,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     persistProfile({ displayName, handles: {}, prefs: { blur: true, weather: true, caption: true } });
   }, [persistProfile]);
 
-  const logOut = useCallback(async () => { persistProfile(null); }, [persistProfile]);
+  const logOut = useCallback(async () => {
+    persistProfile(null);
+    await signOutAuth();
+  }, [persistProfile]);
+
+  const authWithGoogle = useCallback(async () => {
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Google-login fejlede');
+    }
+  }, [showToast]);
+
+  const authWithApple = useCallback(async () => {
+    try {
+      await signInWithApple();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Apple-login fejlede');
+    }
+  }, [showToast]);
+
+  const authWithMagicLink = useCallback(async (email: string) => {
+    await signInWithMagicLink(email);
+  }, []);
 
   const setHandle = useCallback((key: string, value: string) => {
     setProfile((p) => {
@@ -225,11 +311,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     weather, live, weatherReady,
     finds, addFind, setShared,
     profile, createProfile, logOut, setHandle, togglePref,
+    authUser, authReady, authWithGoogle, authWithApple, authWithMagicLink,
     activeSpotId, setActiveSpot: setActiveSpotId,
     targetSpecies, setTargetSpeciesName: setTargetName,
     relations, cycleRelation,
     segment, setSegment, showHidden, toggleHidden: () => setShowHidden((v) => !v),
     sharing, setSharing,
+    logLocation, setLogLocation,
     view, goto,
     shareFind, openShare, closeShare,
     toast, showToast,
