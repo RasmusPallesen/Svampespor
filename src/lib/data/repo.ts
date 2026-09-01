@@ -9,9 +9,10 @@
  * UI'et kender kun `Repo`. At skifte adapter ændrer intet i komponenterne.
  */
 
+import { communitySpeciesFrom, type CatalogSpecies } from '../../data/catalog';
 import { SEED_FEED, seedFinds } from './seed';
 import { getSupabase } from './supabaseClient';
-import type { FeedItem, FindInput, FindRecord, Profile } from './types';
+import type { FeedItem, FindInput, FindRecord, Profile, SpeciesProposal } from './types';
 
 export interface Repo {
   /** Er dette laget, der rent faktisk persisterer? */
@@ -22,6 +23,10 @@ export interface Repo {
   getProfile(): Promise<Profile | null>;
   saveProfile(profile: Profile | null): Promise<void>;
   listFeed(): Promise<FeedItem[]>;
+  /** Tier 2: uverificerede arter, Bestem selv har foreslået. Se docs/roadmap.md. */
+  listCommunitySpecies(): Promise<CatalogSpecies[]>;
+  /** Gemmer et Bestem-forslag som ny fællesskabsart, hvis navnet ikke allerede findes. */
+  ensureSpecies(proposal: SpeciesProposal): Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -33,6 +38,7 @@ class SessionRepo implements Repo {
   private finds: FindRecord[] = seedFinds();
   private profile: Profile | null = null;
   private seq = 0;
+  private communitySpecies: CatalogSpecies[] = [];
 
   async listFinds() {
     return [...this.finds];
@@ -58,6 +64,24 @@ class SessionRepo implements Repo {
 
   async listFeed() {
     return SEED_FEED;
+  }
+
+  async listCommunitySpecies() {
+    return [...this.communitySpecies];
+  }
+
+  async ensureSpecies(proposal: SpeciesProposal) {
+    const exists = this.communitySpecies.some(
+      (s) => s.nameDa.toLowerCase() === proposal.nameDa.toLowerCase(),
+    );
+    if (exists) return;
+    this.communitySpecies = [
+      ...this.communitySpecies,
+      communitySpeciesFrom({
+        nameDa: proposal.nameDa, nameLat: proposal.nameLat,
+        window: proposal.window, rainMm: proposal.rainMm, lookalikes: proposal.lookalikes,
+      }),
+    ];
   }
 }
 
@@ -163,6 +187,44 @@ class SupabaseRepo implements Repo {
     // community_finds-view'et findes, men uden auth og rigtige profiler er
     // seed-feedet mere illustrativt end en tom liste.
     return SEED_FEED;
+  }
+
+  async listCommunitySpecies(): Promise<CatalogSpecies[]> {
+    // Kun de uverificerede — kernearterne er allerede i src/data/catalog.ts
+    // med rigere, Svampeatlas-sourcet data. At hente dem her ville bare give
+    // en dårligere duplikat af noget, appen allerede har.
+    const { data, error } = await this.db
+      .from('species')
+      .select('name_da, name_lat, window_lo, window_hi, rain_mm, lookalikes')
+      .eq('reviewed', false);
+    if (error) throw error;
+    return (data ?? []).map((r) =>
+      communitySpeciesFrom({
+        nameDa: r.name_da, nameLat: r.name_lat ?? '',
+        window: [r.window_lo, r.window_hi], rainMm: Number(r.rain_mm),
+        lookalikes: r.lookalikes ?? [],
+      }),
+    );
+  }
+
+  async ensureSpecies(proposal: SpeciesProposal): Promise<void> {
+    // ignoreDuplicates → ON CONFLICT (name_da) DO NOTHING: findes arten
+    // allerede (kerne- eller tidligere fællesskabsart), rører vi den ikke.
+    // Kræver ikke en UPDATE-politik, kun INSERT — mindste fornødne rettighed.
+    const { error } = await this.db.from('species').upsert(
+      {
+        name_da: proposal.nameDa,
+        name_lat: proposal.nameLat,
+        window_lo: proposal.window[0],
+        window_hi: proposal.window[1],
+        rain_mm: proposal.rainMm,
+        lookalikes: proposal.lookalikes,
+        source: 'ai',
+        reviewed: false,
+      },
+      { onConflict: 'name_da', ignoreDuplicates: true },
+    );
+    if (error) throw error;
   }
 }
 

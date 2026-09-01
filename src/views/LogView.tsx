@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { HABITATS, SPECIES, findSpot } from '../data/catalog';
+import { HABITATS, findSpot } from '../data/catalog';
 import { fmtLongDate } from '../lib/format';
 import { read } from '../lib/weather/model';
 import { useApp } from '../state/AppContext';
@@ -26,15 +26,15 @@ export function LogView() {
 /* ------------------------------------------------------------------ */
 
 function LogForm() {
-  const { weather, activeSpotId, addFind, today, showToast, logLocation, setLogLocation } = useApp();
+  const { weather, activeSpotId, addFind, allSpecies, today, showToast, logLocation, setLogLocation } = useApp();
   const captureLocation = useCaptureLocation();
-  const [speciesName, setSpeciesName] = useState(SPECIES[0].nameDa);
+  const [speciesName, setSpeciesName] = useState(allSpecies[0].nameDa);
   const [habitat, setHabitat] = useState(HABITATS[0]);
   const [quantity, setQuantity] = useState('6');
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const species = SPECIES.find((s) => s.nameDa === speciesName) ?? SPECIES[0];
+  const species = allSpecies.find((s) => s.nameDa === speciesName) ?? allSpecies[0];
   const high = species.risk === 'high';
 
   const save = async () => {
@@ -77,7 +77,11 @@ function LogForm() {
       <div className="field">
         <label htmlFor="fArt">Art</label>
         <select id="fArt" value={speciesName} onChange={(e) => setSpeciesName(e.target.value)}>
-          {SPECIES.map((s) => <option key={s.nameDa} value={s.nameDa}>{s.nameDa}</option>)}
+          {allSpecies.map((s) => (
+            <option key={s.nameDa} value={s.nameDa}>
+              {s.nameDa}{s.reviewed === false ? ' · AI, ikke verificeret' : ''}
+            </option>
+          ))}
         </select>
       </div>
       <div className={`warn${high ? '' : ' safe'}`}>

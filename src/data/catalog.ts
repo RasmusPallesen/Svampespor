@@ -32,7 +32,52 @@ export interface CatalogSpecies extends Species {
   risk: Risk;
   /** Forvekslingstekst — kan indeholde <b>…</b>. Vises altid ved artsvalg. */
   warn: string;
-  season: Season;
+  /**
+   * Valgfri: kernearterne har alle sourcet sæsondata; Tier 2-fællesskabsarter
+   * (se `communitySpeciesFrom`) har det ikke — en AI-vurdering ud fra 1-3
+   * billeder er ikke en Svampeatlas-fænologi, og skal ikke foregive at være
+   * det. `seasonFactor`/`seasonState` falder korrekt tilbage til "ingen
+   * dæmpning" uden den.
+   */
+  season?: Season;
+  /**
+   * false/undefined = uverificeret Tier 2-art, tilføjet fra en Bestem-
+   * identifikation. true = hånd-verificeret kerneart (mod Svampeatlas).
+   * Udelades på kernearterne i denne fil — de er pr. definition verificerede.
+   */
+  reviewed?: boolean;
+}
+
+/**
+ * Bygger en visningsklar `CatalogSpecies` af en uverificeret Tier 2-række
+ * fra `species`-tabellen (`reviewed = false`). Ingen `season` — kun
+ * Svampeatlas-hentet fænologi får lov at dæmpe efter kalendermåned.
+ * `risk`/`warn` afledes af AI'ens egne `lookalikes`, samme felt Bestem
+ * allerede viser i "Forvekslinger du skal udelukke".
+ */
+export function communitySpeciesFrom(row: {
+  nameDa: string;
+  nameLat: string;
+  window: [number, number];
+  rainMm: number;
+  lookalikes: { name_da: string; name_lat: string; severity: string; how_to_tell: string }[];
+}): CatalogSpecies {
+  const deadly = row.lookalikes.filter((l) => l.severity === 'doedelig');
+  const risk: Risk = deadly.length > 0 ? 'high' : row.lookalikes.length > 0 ? 'med' : 'low';
+
+  const lookalikeLines = row.lookalikes
+    .map((l) => `<b>${l.name_da}</b> (${l.severity === 'doedelig' ? 'dødelig' : l.severity}): ${l.how_to_tell}`)
+    .join(' ');
+
+  const warn =
+    `<b>Uverificeret art — tilføjet fra en tidligere AI-bestemmelse, ikke tjekket mod Svampeatlas.</b> ` +
+    (lookalikeLines || 'Ingen forvekslinger noteret ved den oprindelige bestemmelse — vær ekstra grundig selv.') +
+    ' Dobbelttjek altid selv, uanset hvad der står her.';
+
+  return {
+    nameDa: row.nameDa, nameLat: row.nameLat, window: row.window, rainMm: row.rainMm,
+    habitats: [], risk, warn, reviewed: false,
+  };
 }
 
 /**

@@ -52,3 +52,30 @@ samme dag. Uden dæmpningen ville Østershats rå score have ligget omkring 60+.
 
 Arter uden `season` (fx ad hoc-konstruerede testarter) dæmpes slet ikke —
 `seasonFactor` falder tilbage til 1, bevidst bagudkompatibelt.
+
+## Tier 1 vs. Tier 2 — hvordan flere end 7 arter kommer ind
+
+De 7 arter herover er **kernearter**: hånd-verificeret mod Svampeatlas, præcis den
+research-proces, denne fil dokumenterer. Danmark har omkring 3.000 registrerede
+arter — at gøre det samme for alle er ikke en engangsopgave, det er en løbende en.
+
+I stedet for at gætte data for arter, ingen har gennemgået, lader appen Bestem selv
+udvide kataloget: hver identifikation beder allerede Claude om et forslag til
+modningsvindue og forvekslinger (`ripening_window`, `rain_mm`, `lookalikes` i
+`ID_PROMPT`'s svarskema). Er den identificerede art ikke allerede en kerneart,
+gemmes det forslag som en **fællesskabsart** (Tier 2) i `species`-tabellen —
+markeret `reviewed = false`, tydeligt mærket "AI, ikke verificeret" i UI'et.
+
+Det betyder:
+- Enhver af Danmarks arter kan logges som fund samme aften, den identificeres —
+  ikke kun de 7.
+- Fællesskabsarter har bevidst ingen `season` (en enkelt AI-vurdering fra 1-3
+  billeder er ikke en Svampeatlas-fænologi) og indgår ikke i Jager/rangerings-
+  funktionen, som forudsætter data, der endnu ikke findes for dem.
+- Sikkerhedsreglerne (CLAUDE.md regel 1-2) svækkes ikke af dette — de håndhæves af
+  `ID_PROMPT` på hvert eneste kald, uanset om arten er kendt i forvejen.
+- Forfremmelse til kerneart sker administrativt (samme research-proces som de
+  originale 7), eller efterhånden som "Crowd-verificering" (Fase 3) bygges.
+
+Se `src/data/catalog.ts` (`communitySpeciesFrom`) og `src/lib/data/repo.ts`
+(`ensureSpecies`) for implementeringen.
