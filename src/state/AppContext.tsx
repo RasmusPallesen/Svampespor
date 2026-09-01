@@ -16,7 +16,7 @@ import { simulateWeather } from '../data/demoWeather';
 import { signInWithApple, signInWithGoogle, signInWithMagicLink, signOutAuth } from '../lib/auth/auth';
 import { getRepo } from '../lib/data/repo';
 import { getSupabase } from '../lib/data/supabaseClient';
-import type { FindInput, FindRecord, Profile, ProfilePrefs } from '../lib/data/types';
+import type { FindInput, FindRecord, Profile, ProfilePrefs, SpeciesProposal } from '../lib/data/types';
 import type { WeatherSeries } from '../lib/weather/model';
 import { fetchForSpots } from '../lib/weather/openMeteo';
 import type { Relation } from '../lib/spots/ranking';
@@ -71,6 +71,16 @@ interface AppState {
   targetSpecies: CatalogSpecies;
   setTargetSpeciesName(name: string): void;
 
+  /**
+   * Kernearter + fællesskabsarter samlet — brug denne til at vise/vælge
+   * blandt ALLE kendte arter (fx Log et fund). `targetSpecies`/Jager-vælgeren
+   * bruger bevidst kun kernearterne (SPECIES), ikke denne — rangeringen
+   * forudsætter data, uverificerede fællesskabsarter endnu ikke har.
+   */
+  allSpecies: CatalogSpecies[];
+  /** Gemmer et Bestem-forslag som fællesskabsart, hvis det ikke allerede er en kerneart. Fejler stille. */
+  ensureSpecies(proposal: SpeciesProposal): Promise<void>;
+
   relations: Record<string, Relation>;
   cycleRelation(id: string, want: Relation): void;
 
@@ -115,6 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [finds, setFinds] = useState<FindRecord[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [communitySpecies, setCommunitySpecies] = useState<CatalogSpecies[]>([]);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -203,6 +214,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })();
     return () => { cancelled = true; };
   }, [today]);
+
+  /* ---- fællesskabsarter (Tier 2) — offentligt læsbare, ikke auth-afhængige ---- */
+  const refreshCommunitySpecies = useCallback(() => {
+    repo.listCommunitySpecies().then(setCommunitySpecies).catch(() => setCommunitySpecies([]));
+  }, [repo]);
+
+  useEffect(() => { refreshCommunitySpecies(); }, [refreshCommunitySpecies]);
+
+  const ensureSpecies = useCallback(async (proposal: SpeciesProposal) => {
+    try {
+      await repo.ensureSpecies(proposal);
+      refreshCommunitySpecies();
+    } catch {
+      // Stille fejl med vilje: fundet er allerede gemt (addFind kører før
+      // dette kaldes) — at fællesskabsarten ikke blev registreret er en
+      // mindre ting, ikke noget der skal afbryde eller alarmere brugeren.
+    }
+  }, [repo, refreshCommunitySpecies]);
+
+  const allSpecies = useMemo(() => [...SPECIES, ...communitySpecies], [communitySpecies]);
 
   /* ---- fund ---- */
   const addFind = useCallback(async (input: FindInput) => {
@@ -314,6 +345,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     authUser, authReady, authWithGoogle, authWithApple, authWithMagicLink,
     activeSpotId, setActiveSpot: setActiveSpotId,
     targetSpecies, setTargetSpeciesName: setTargetName,
+    allSpecies, ensureSpecies,
     relations, cycleRelation,
     segment, setSegment, showHidden, toggleHidden: () => setShowHidden((v) => !v),
     sharing, setSharing,

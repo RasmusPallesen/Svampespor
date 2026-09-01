@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { HABITATS, SHOT_SLOTS, SPECIES, findSpot } from '../data/catalog';
+import { HABITATS, SHOT_SLOTS, SPECIES, findSpecies, findSpot } from '../data/catalog';
 import { identify } from '../lib/id/identify';
 import { shrink } from '../lib/id/shrink';
 import type { Candidate, IdResult, Shot } from '../lib/id/types';
@@ -18,7 +18,7 @@ const SEV_LABEL: Record<string, string> = { doedelig: 'dødelig', giftig: 'gifti
 const sevClass = (s: string) => (s === 'doedelig' ? 'dodelig' : s === 'giftig' ? 'giftig' : 'uspiselig');
 
 export function BestemView() {
-  const { weather, activeSpotId, addFind, today, goto, showToast } = useApp();
+  const { weather, activeSpotId, addFind, ensureSpecies, today, goto, showToast } = useApp();
   const captureLocation = useCaptureLocation();
   const [shots, setShots] = useState<(Shot | null)[]>([null, null, null]);
   const [habitat, setHabitat] = useState(HABITATS[0]);
@@ -86,6 +86,19 @@ export function BestemView() {
         confidence: c.confidence,
         geo,
       });
+      // Er arten ikke allerede en hånd-verificeret kerneart, gemmes Claudes
+      // egne forslag til modningsvindue og forvekslinger som en Tier
+      // 2-fællesskabsart — se docs/roadmap.md. Sker først EFTER et vellykket
+      // addFind, så det aldrig kan blokere selve fundet, og kun når
+      // brugeren rent faktisk er logget ind (samme betingelse addFind lige
+      // har bevist er opfyldt).
+      if (!findSpecies(c.name_da) && result.kind === 'done') {
+        void ensureSpecies({
+          nameDa: c.name_da, nameLat: c.name_lat,
+          window: c.ripening_window, rainMm: c.rain_mm,
+          lookalikes: result.data.lookalikes,
+        });
+      }
       setShots([null, null, null]);
       setObs('');
       setResult({ kind: 'idle' });

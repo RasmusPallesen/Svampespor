@@ -23,9 +23,10 @@
 - [ ] DMI Open Data ved siden af Open-Meteo
 
 ## Fase 3 — fællesskab
+- [x] Tier 2: fællesskabsarter. Bestem gemmer nu sit eget forslag til modningsvindue + forvekslinger som en uverificeret art i `species`-tabellen, hvis den ikke allerede er en kerneart — løser "kun 7 arter" uden at gætte de øvrige ~3000 danske arters data i forvejen. Vises i Log et fund, tydeligt mærket "AI, ikke verificeret"; indgår bevidst ikke i Jager/rangering, som forudsætter data, en enkelt AI-vurdering ikke giver. Se docs/species.md.
 - [ ] Feed over slørede fund
 - [ ] Følg andre samlere
-- [ ] Crowd-verificering af svære bestemmelser
+- [ ] Crowd-verificering af svære bestemmelser — den naturlige forfremmelsesvej for fællesskabsarter: nok uafhængige bekræftelser (eller en hånd-research-tur som kernearternes) flytter en art fra Tier 2 til Tier 1
 - [ ] Sæsonudfordringer
 - [ ] Delekort som canvas-billede + Web Share API
 

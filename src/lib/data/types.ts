@@ -7,8 +7,27 @@
  */
 
 import type { GeoPoint } from '../geo/geolocation';
+import type { Lookalike } from '../id/types';
 
 export type IdSource = 'user' | 'ai' | 'community';
+
+/**
+ * Forslag til en ny "fællesskabsart" — Tier 2, se docs/roadmap.md.
+ *
+ * Bestem foreslår selv `window`/`rainMm`/`lookalikes` for enhver art, den
+ * identificerer, uanset om arten allerede er en hånd-verificeret kerneart.
+ * Er den ikke det, gemmes forslaget som en uverificeret species-række i
+ * stedet for at gå tabt — det er hele mekanismen bag Tier 2. Sikkerheds-
+ * reglerne (CLAUDE.md regel 1-2) kommer stadig fra ID_PROMPT ved hvert
+ * kald, ikke fra denne gemte tilstand.
+ */
+export interface SpeciesProposal {
+  nameDa: string;
+  nameLat: string;
+  window: [number, number];
+  rainMm: number;
+  lookalikes: Lookalike[];
+}
 
 /** Vejret som det så ud, da fundet blev gjort. Fryses fast, opdateres aldrig. */
 export interface WeatherSnapshot {
