@@ -161,40 +161,44 @@ function InsightBox() {
 
 function FindCard({ find: f }: { find: FindRecord }) {
   const { profile, openShare } = useApp();
+  const hasPhotos = f.photos && f.photos.length > 0;
+
   return (
     <div className="find">
-      <div className="find-top">
-        <b>
-          {f.species}
-          {f.source === 'ai'
-            ? <span className="src-tag ai">AI-forslag {f.confidence}%</span>
-            : <span className="src-tag">egen bestemmelse</span>}
-        </b>
-        <time>{fmtLongDate(f.date)}</time>
-      </div>
-      {f.photos && f.photos.length > 0 && (
-        <div className="find-shots">
-          {f.photos.map((p, i) => <img key={i} src={p} alt={`Foto af ${f.species}`} />)}
+      {hasPhotos && (
+        <div className={`find-shots${f.photos!.length === 1 ? ' one' : ''}`}>
+          {f.photos!.map((p, i) => <img key={i} src={p} alt={`Foto af ${f.species}`} />)}
         </div>
       )}
-      <div className="find-meta">{f.quantity} stk · {f.habitat} · {f.spotName}</div>
-      {f.geo && (
-        <div className="find-geo">
-          <span>📍 {f.geo.lat.toFixed(5)}, {f.geo.lon.toFixed(5)}</span>
-          <a href={`https://www.google.com/maps?q=${f.geo.lat},${f.geo.lon}`} target="_blank" rel="noreferrer">Åbn i kort</a>
+      <div className="find-body">
+        <div className="find-top">
+          <b>
+            {f.species}
+            {f.source === 'ai'
+              ? <span className="src-tag ai">AI-forslag {f.confidence}%</span>
+              : <span className="src-tag">egen bestemmelse</span>}
+          </b>
+          <time>{fmtLongDate(f.date)}</time>
         </div>
-      )}
-      {f.note && <div className="find-note">"{f.note}"</div>}
-      <div className="snap">
-        <div><b>{f.snapshot.rain14} mm</b><span>14 d før</span></div>
-        <div><b>{f.snapshot.daysSince} d</b><span>siden regn</span></div>
-        <div><b>{f.snapshot.rh}%</b><span>luftfugt</span></div>
-        <div><b>{f.snapshot.tmax}°</b><span>temp</span></div>
-      </div>
-      <div className="find-foot">
-        <button className="share-btn" onClick={() => openShare(f)}>
-          {profile ? 'Del fundet' : 'Del — kræver profil'}
-        </button>
+        <div className="find-meta">{f.quantity} stk · {f.habitat} · {f.spotName}</div>
+        {f.geo && (
+          <div className="find-geo">
+            <span>📍 {f.geo.lat.toFixed(5)}, {f.geo.lon.toFixed(5)}</span>
+            <a href={`https://www.google.com/maps?q=${f.geo.lat},${f.geo.lon}`} target="_blank" rel="noreferrer">Åbn i kort</a>
+          </div>
+        )}
+        {f.note && <div className="find-note">"{f.note}"</div>}
+        <div className="snap">
+          <div><b>{f.snapshot.rain14} mm</b><span>14 d før</span></div>
+          <div><b>{f.snapshot.daysSince} d</b><span>siden regn</span></div>
+          <div><b>{f.snapshot.rh}%</b><span>luftfugt</span></div>
+          <div><b>{f.snapshot.tmax}°</b><span>temp</span></div>
+        </div>
+        <div className="find-foot">
+          <button className="share-btn" onClick={() => openShare(f)}>
+            {profile ? 'Del fundet' : 'Del — kræver profil'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ export function SpotPanel() {
   }, [weather, targetSpecies, finds, relations, today]);
 
   const hunt = (
-    <>
+    <div className="panel-top">
       <div className="seg">
         <button data-seg="idag" aria-pressed={segment === 'idag'} onClick={() => setSegment('idag')}>I dag</button>
         <button data-seg="mine" aria-pressed={segment === 'mine'} onClick={() => setSegment('mine')}>Mine steder</button>
@@ -38,23 +38,21 @@ export function SpotPanel() {
           {SPECIES.map((s) => <option key={s.nameDa} value={s.nameDa}>{s.nameDa}</option>)}
         </select>
       </div>
-    </>
+    </div>
   );
 
   if (segment === 'idag') {
     const top = ranked.filter((r) => r.relation !== 'hidden').slice(0, 6);
     return (
-      <>
+      <div className="panel">
         {hunt}
-        <div className="panel">
-          <div className="panel-label">
-            <span>Bedst i dag — {targetSpecies.nameDa}</span>
-            <span>{targetSpecies.window[0]}-{targetSpecies.window[1]} d</span>
-          </div>
-          {top.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum />)}
-          <button className="link-btn" onClick={() => setSegment('mine')}>Se kun mine steder →</button>
+        <div className="panel-label">
+          <span>Bedst i dag — {targetSpecies.nameDa}</span>
+          <span>{targetSpecies.window[0]}-{targetSpecies.window[1]} d</span>
         </div>
-      </>
+        {top.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum />)}
+        <button className="link-btn" onClick={() => setSegment('mine')}>Se kun mine steder →</button>
+      </div>
     );
   }
 
@@ -63,30 +61,28 @@ export function SpotPanel() {
   const hid = ranked.filter((r) => r.relation === 'hidden');
 
   return (
-    <>
+    <div className="panel">
       {hunt}
-      <div className="panel">
-        {pin.length > 0 && <>
-          <div className="grp-label">Fastgjort — {pin.length}/5</div>
-          {pin.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum={false} />)}
-        </>}
-        {fol.length > 0 && <>
-          <div className="grp-label">Fulgt</div>
-          {fol.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum={false} />)}
-        </>}
-        {pin.length === 0 && fol.length === 0 && (
-          <div className="empty">Ingen steder endnu. Fastgør dem, du vender tilbage til.</div>
-        )}
-        {hid.length > 0 && showHidden && <>
-          <div className="grp-label">Skjult</div>
-          {hid.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum={false} />)}
-        </>}
-        {hid.length > 0 && (
-          <button className="link-btn" onClick={toggleHidden}>
-            {showHidden ? 'Skjul de fravalgte' : `Vis ${hid.length} fravalgte`}
-          </button>
-        )}
-      </div>
-    </>
+      {pin.length > 0 && <>
+        <div className="grp-label">Fastgjort — {pin.length}/5</div>
+        {pin.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum={false} />)}
+      </>}
+      {fol.length > 0 && <>
+        <div className="grp-label">Fulgt</div>
+        {fol.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum={false} />)}
+      </>}
+      {pin.length === 0 && fol.length === 0 && (
+        <div className="empty">Ingen steder endnu. Fastgør dem, du vender tilbage til.</div>
+      )}
+      {hid.length > 0 && showHidden && <>
+        <div className="grp-label">Skjult</div>
+        {hid.map((r, i) => <RankRow key={r.spot.id} ranked={r} index={i} showNum={false} />)}
+      </>}
+      {hid.length > 0 && (
+        <button className="link-btn" onClick={toggleHidden}>
+          {showHidden ? 'Skjul de fravalgte' : `Vis ${hid.length} fravalgte`}
+        </button>
+      )}
+    </div>
   );
 }

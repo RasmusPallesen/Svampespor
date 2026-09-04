@@ -319,7 +319,11 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
 .warn.safe .ic, .warn.safe b { color: var(--lichen); }
 
 /* ---------- fund-kort ---------- */
-.find { border: 1px solid var(--bark); border-radius: 12px; padding: 14px; margin-bottom: 11px; background: var(--humus); }
+.find { border: 1px solid var(--bark); border-radius: 12px; margin-bottom: 11px; background: var(--humus); overflow: hidden; }
+.find-shots { display: flex; gap: 2px; background: var(--bark); }
+.find-shots img { flex: 1; min-width: 0; height: 132px; object-fit: cover; display: block; }
+.find-shots.one img { height: 190px; }
+.find-body { padding: 14px; }
 .find-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 9px; }
 .find-top b { font-family: var(--display); font-size: 16.5px; font-weight: 500; letter-spacing: -0.01em; }
 .find-top time { font-family: var(--mono); font-size: 10px; color: var(--mute); white-space: nowrap; }
@@ -331,8 +335,6 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
 .find-geo a { color: var(--lichen); text-decoration: none; border-bottom: 1px solid var(--bark); }
 .find-geo a:hover { color: var(--paper); border-color: var(--lichen); }
 .find-note { font-size: 12.5px; color: var(--mute); font-style: italic; margin-bottom: 11px; }
-.find-shots { display: flex; gap: 6px; margin-bottom: 11px; }
-.find-shots img { width: 52px; height: 52px; object-fit: cover; border-radius: 7px; border: 1px solid var(--bark); }
 .src-tag {
   font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.08em; text-transform: uppercase;
   border: 1px solid var(--bark); color: var(--mute); padding: 2px 7px; border-radius: 99px; margin-left: 8px; white-space: nowrap;
@@ -416,6 +418,10 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
 }
 .shot-hint { font-size: 12px; color: var(--mute); line-height: 1.5; margin-bottom: 14px; }
 .shot-hint b { color: var(--lichen); font-weight: 600; }
+
+/* ---------- egne billeder i bestemmelsen ---------- */
+.own-shots { display: flex; gap: 6px; margin-bottom: 14px; }
+.own-shots img { flex: 1; min-width: 0; height: 108px; object-fit: cover; border-radius: 9px; border: 1px solid var(--bark); }
 
 /* ---------- analyse + kandidater ---------- */
 .analysing { text-align: center; padding: 28px 16px; }
@@ -540,15 +546,16 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
 .toast.on { opacity: 1; }
 
 /* ---------- segmenteret valg + jager ---------- */
-.seg { display: flex; gap: 0; background: var(--loam); border: 1px solid var(--bark); border-radius: 9px; padding: 3px; margin: 0 16px 14px; }
+.panel-top { margin-bottom: 16px; }
+.seg { display: flex; gap: 0; background: var(--loam); border: 1px solid var(--bark); border-radius: 9px; padding: 3px; margin-bottom: 10px; }
 .seg button {
   flex: 1; background: none; border: none; color: var(--mute); cursor: pointer; padding: 9px 6px; border-radius: 7px;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.18s, color 0.18s;
 }
 .seg button[aria-pressed='true'] { background: var(--raised); color: var(--paper); }
-.hunt { display: flex; align-items: center; gap: 10px; margin: 0 16px 14px; padding: 11px 13px; background: var(--humus); border: 1px solid var(--bark); border-radius: 9px; }
+.hunt { display: flex; align-items: center; gap: 10px; padding: 11px 13px; background: var(--loam); border: 1px solid var(--bark); border-radius: 9px; }
 .hunt label { margin: 0; flex: 0 0 auto; }
-.hunt select { background: var(--loam); border: 1px solid var(--bark); color: var(--paper); font-family: var(--body); font-size: 13px; padding: 7px 10px; border-radius: 7px; flex: 1; min-width: 0; }
+.hunt select { background: var(--humus); border: 1px solid var(--bark); color: var(--paper); font-family: var(--body); font-size: 13px; padding: 7px 10px; border-radius: 7px; flex: 1; min-width: 0; }
 
 /* ---------- rangerede steder ---------- */
 .rank { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--bark); }
