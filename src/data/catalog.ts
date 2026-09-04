@@ -183,18 +183,35 @@ export const SPECIES: CatalogSpecies[] = [
   },
 ];
 
-/** Voksesteder man kan vælge i log- og bestem-formularerne. */
+/**
+ * Voksested og jordtype — to adskilte valg i log- og bestem-formularerne.
+ *
+ * Voksested er biomet/træet, svampen stod under eller i — det, man kan se
+ * med det samme. Jordtype er selve jordbunden — det, man sjældnere kender
+ * uden at grave, deraf "Ved ikke" som en reel mulighed, ikke en udvej.
+ * Begge lister er fritekst valgt af brugeren ved log/bestem, adskilt fra
+ * (men ordforrådsmæssigt i familie med) de interne `habitats`-tags på
+ * `Spot`/`CatalogSpecies`, som rangeringen bruger — se docs/spots.md.
+ */
 export const HABITATS: string[] = [
-  'Bøgeskov, muldbund',
-  'Gammel granplantage',
+  'Bøgeskov',
+  'Granskov / nåleskov',
+  'Egeskov',
+  'Fyrreskov / klitplantage',
   'Blandet løvskov',
-  'Egeskov, sur bund',
+  'Elle- eller askesump',
   'Skovbryn / lysning',
-  'Mosset klit / fyr',
   'På dødt træ / stub',
   'Græsplæne / eng',
-  'Elle- eller askesump',
-  'Kalkrig muldbund',
+];
+
+export const SOIL_TYPES: string[] = [
+  'Muldbund (næringsrig)',
+  'Morbund (sur, næringsfattig)',
+  'Kalkrig moræneler',
+  'Sandet, næringsfattig',
+  'Mose / vådbund (tørv)',
+  'Ved ikke',
 ];
 
 /** De tre billeder bestemmelsen beder om, i rækkefølge. */

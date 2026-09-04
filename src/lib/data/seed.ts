@@ -15,6 +15,7 @@ const id = () => `seed-${++counter}`;
 interface SeedFind {
   art: string;
   hab: string;
+  jord: string;
   ant: string;
   spot: string;
   note: string;
@@ -23,9 +24,9 @@ interface SeedFind {
 }
 
 const RAW: SeedFind[] = [
-  { art: 'Kantarel', hab: 'Bøgeskov, muldbund', ant: '14', spot: 'Gribskov', note: 'Nordvendt skråning ved den væltede bøg. Hele familien i én klynge — lugtede af abrikos allerede da jeg satte mig på hug.', date: '2026-08-19', snap: { r14: 31, days: 6, rh: 88, t: 19 } },
-  { art: 'Spiselig rørhat (Karl Johan)', hab: 'Gammel granplantage', ant: '3', spot: 'Tisvilde Hegn', note: 'Store og orme-frie. Stod i mos langs den gamle brandvej.', date: '2026-08-11', snap: { r14: 26, days: 8, rh: 84, t: 21 } },
-  { art: 'Tragtkantarel', hab: 'Blandet løvskov', ant: '40', spot: 'Rude Skov', note: 'Et helt tæppe. Tog en tredjedel. Tågen lå stadig mellem stammerne kl. 7.', date: '2025-10-04', snap: { r14: 42, days: 9, rh: 93, t: 12 } },
+  { art: 'Kantarel', hab: 'Bøgeskov', jord: 'Muldbund (næringsrig)', ant: '14', spot: 'Gribskov', note: 'Nordvendt skråning ved den væltede bøg. Hele familien i én klynge — lugtede af abrikos allerede da jeg satte mig på hug.', date: '2026-08-19', snap: { r14: 31, days: 6, rh: 88, t: 19 } },
+  { art: 'Spiselig rørhat (Karl Johan)', hab: 'Granskov / nåleskov', jord: 'Sandet, næringsfattig', ant: '3', spot: 'Tisvilde Hegn', note: 'Store og orme-frie. Stod i mos langs den gamle brandvej.', date: '2026-08-11', snap: { r14: 26, days: 8, rh: 84, t: 21 } },
+  { art: 'Tragtkantarel', hab: 'Blandet løvskov', jord: 'Ved ikke', ant: '40', spot: 'Rude Skov', note: 'Et helt tæppe. Tog en tredjedel. Tågen lå stadig mellem stammerne kl. 7.', date: '2025-10-04', snap: { r14: 42, days: 9, rh: 93, t: 12 } },
 ];
 
 export function seedFinds(): FindRecord[] {
@@ -34,6 +35,7 @@ export function seedFinds(): FindRecord[] {
     species: f.art,
     speciesLat: findSpecies(f.art)?.nameLat,
     habitat: f.hab,
+    soil: f.jord,
     quantity: f.ant,
     spotId: spotByName(f.spot)?.id ?? f.spot,
     spotName: f.spot,

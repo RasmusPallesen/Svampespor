@@ -107,13 +107,14 @@ class SupabaseRepo implements Repo {
   async listFinds(): Promise<FindRecord[]> {
     const { data, error } = await this.db
       .from('finds')
-      .select('id, species_text, habitat, quantity, spot_id, found_at, note, weather, id_source, id_confidence, shared, lat, lon')
+      .select('id, species_text, habitat, soil, quantity, spot_id, found_at, note, weather, id_source, id_confidence, shared, lat, lon')
       .order('found_at', { ascending: false });
     if (error) throw error;
     return (data ?? []).map((r): FindRecord => ({
       id: r.id,
       species: r.species_text ?? 'Ukendt',
       habitat: r.habitat ?? '',
+      soil: r.soil ?? '',
       quantity: r.quantity != null ? String(r.quantity) : '1',
       spotId: r.spot_id ?? '',
       spotName: r.weather?.spotName ?? '',
@@ -136,6 +137,7 @@ class SupabaseRepo implements Repo {
         user_id: uid,
         species_text: input.species,
         habitat: input.habitat,
+        soil: input.soil,
         quantity: Number(input.quantity) || null,
         spot_id: input.spotId,
         found_at: input.date,

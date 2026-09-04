@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { HABITATS, findSpot } from '../data/catalog';
+import { HABITATS, SOIL_TYPES, findSpot } from '../data/catalog';
 import { fmtLongDate } from '../lib/format';
 import { read } from '../lib/weather/model';
 import { useApp } from '../state/AppContext';
@@ -30,6 +30,7 @@ function LogForm() {
   const captureLocation = useCaptureLocation();
   const [speciesName, setSpeciesName] = useState(allSpecies[0].nameDa);
   const [habitat, setHabitat] = useState(HABITATS[0]);
+  const [soil, setSoil] = useState(SOIL_TYPES[0]);
   const [quantity, setQuantity] = useState('6');
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
@@ -48,6 +49,7 @@ function LogForm() {
         species: species.nameDa,
         speciesLat: species.nameLat,
         habitat,
+        soil,
         quantity: quantity || '1',
         spotId: spot.id,
         spotName: spot.name,
@@ -88,11 +90,17 @@ function LogForm() {
         <span className="ic">{high ? '!' : 'i'}</span>
         <div><b>{species.nameLat}</b><br /><span dangerouslySetInnerHTML={{ __html: species.warn }} /></div>
       </div>
+      <div className="field">
+        <label htmlFor="fHab">Voksested</label>
+        <select id="fHab" value={habitat} onChange={(e) => setHabitat(e.target.value)}>
+          {HABITATS.map((h) => <option key={h}>{h}</option>)}
+        </select>
+      </div>
       <div className="field field-row">
         <div>
-          <label htmlFor="fHab">Habitat</label>
-          <select id="fHab" value={habitat} onChange={(e) => setHabitat(e.target.value)}>
-            {HABITATS.map((h) => <option key={h}>{h}</option>)}
+          <label htmlFor="fJord">Jordtype</label>
+          <select id="fJord" value={soil} onChange={(e) => setSoil(e.target.value)}>
+            {SOIL_TYPES.map((j) => <option key={j}>{j}</option>)}
           </select>
         </div>
         <div>
@@ -180,7 +188,7 @@ function FindCard({ find: f }: { find: FindRecord }) {
           </b>
           <time>{fmtLongDate(f.date)}</time>
         </div>
-        <div className="find-meta">{f.quantity} stk · {f.habitat} · {f.spotName}</div>
+        <div className="find-meta">{[`${f.quantity} stk`, f.habitat, f.soil, f.spotName].filter(Boolean).join(' · ')}</div>
         {f.geo && (
           <div className="find-geo">
             <span>📍 {f.geo.lat.toFixed(5)}, {f.geo.lon.toFixed(5)}</span>
