@@ -31,6 +31,7 @@
 - [ ] Delekort som canvas-billede + Web Share API
 
 ## Fase 4 — det der gør den til din
+- [x] Systemsteders `habitats` udvidet med rigtig jordbund (kalkrig/sandet/mose) og fuld trævariation pr. sted, sourcet enkeltvis hos Naturstyrelsen — se docs/spots.md. Fem nye velkendte, offentligt tilgængelige sjællandske svampesteder tilføjet (Teglstrup Hegn, Gurre Vang, Bidstrup Skovene, Sorø Sønderskov, Faksinge Skov), 10 → 15 i alt
 - [x] Sæsondata pr. art hentet fra Svampeatlas, dokumenteret i `docs/species.md` — se dér for det vigtigste fund: modellen har ingen kalenderspærre endnu
 - [x] `season` koblet ind i `scoreFor` som en gaussisk dæmpende faktor (`seasonFactor`, 0,15-1) uden for kernesæsonen — 7 nye tests, verificeret med rigtige vejrdata (Østershat 17 vs. Kantarel 51, samme dag/sted, 31/8-2026)
 - [ ] Kalibrering af regnbaserede modningsvinduer (`window`, `rainMm`) mod Svampeatlas — kræver reel fund-vs-vejr-korrelation, ikke kun fænologitekst
