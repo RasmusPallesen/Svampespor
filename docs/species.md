@@ -79,3 +79,13 @@ Det betyder:
 
 Se `src/data/catalog.ts` (`communitySpeciesFrom`) og `src/lib/data/repo.ts`
 (`ensureSpecies`) for implementeringen.
+
+## Voksested, ikke kun fænologi
+
+`habitats` på hver kerneart styrer `habitatFactor` i rangeringen — det, der
+afgør "voksested passer"-mærket, når du endnu ikke har fund-historik et
+sted. Kantarel, Karl Johan og Tragtkantarel fik i september 2026 udvidet
+deres `habitats` med konkret voksestedsinfo (sandet/sur bund, birk, ung
+bøg), sourcet fra Lokalafdelingen Sjælland og Svampeatlas-observationer —
+se `docs/spots.md` for kilder og for den tilsvarende opdatering af
+stedernes egen jordbund (kalkrig/sandet/mose).

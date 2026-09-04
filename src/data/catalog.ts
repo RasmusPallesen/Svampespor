@@ -81,25 +81,40 @@ export function communitySpeciesFrom(row: {
 }
 
 /**
- * Systemsteder — Nordsjælland og omegn. `travelMin` er rejsetid fra basen.
+ * Systemsteder — Sjælland. `travelMin` er rejsetid fra basen.
  *
  * `id` er den samme UUID som rækken i `spots`-tabellen (source='system'),
  * sat med faste literaler i supabase/migrations/0004_seed_system_data.sql
  * — ikke gen_random_uuid() — netop så klient og database er enige om
  * identiteten. `finds.spot_id` er en fremmednøgle til denne tabel, så et
  * slug her ville brække enhver skrivning gennem Supabase-adapteren.
+ *
+ * `habitats` er ikke gættet — hvert steds trævalg og jordbund er slået op
+ * hos Naturstyrelsen (driftsplaner/naturguider) eller anden navngiven kilde,
+ * se docs/spots.md for citater og URL'er pr. sted. To tags ligner hinanden
+ * men er bevidst forskellige: `mos` er mosdække i bunden af nål/blandskov
+ * (det, kantareller og rørhatte vokser i), `mose` er en egentlig
+ * vådbund/tørvemose et andet sted i skoven — samme ord ville skjule en
+ * reel økologisk forskel. `kalkrig` er kun sat, hvor kilden eksplicit
+ * nævner kalkholdig/kalkrig jord — ikke antaget ud fra Sjællands moræneler
+ * generelt.
  */
 export const SPOTS: Spot[] = [
-  { id: 'a45aa224-112b-45be-b611-0b0f52409517', name: 'Gribskov', region: 'Nordsjælland', lat: 55.978, lon: 12.294, travelMin: 55, habitats: ['bøg', 'gran', 'mos', 'gammelskov'] },
-  { id: '9149060e-a086-44fe-b829-4ab6e353ae1f', name: 'Tisvilde Hegn', region: 'Nordkysten', lat: 56.048, lon: 12.092, travelMin: 65, habitats: ['fyr', 'mos', 'klit', 'sur'] },
-  { id: 'b7c327c5-c0a1-4c96-8164-3bd97988ae4c', name: 'Rude Skov', region: 'Holte', lat: 55.833, lon: 12.443, travelMin: 30, habitats: ['bøg', 'gran', 'løv'] },
+  { id: 'a45aa224-112b-45be-b611-0b0f52409517', name: 'Gribskov', region: 'Nordsjælland', lat: 55.978, lon: 12.294, travelMin: 55, habitats: ['bøg', 'gran', 'mos', 'gammelskov', 'mose', 'sandet'] },
+  { id: '9149060e-a086-44fe-b829-4ab6e353ae1f', name: 'Tisvilde Hegn', region: 'Nordkysten', lat: 56.048, lon: 12.092, travelMin: 65, habitats: ['fyr', 'mos', 'klit', 'sur', 'sandet'] },
+  { id: 'b7c327c5-c0a1-4c96-8164-3bd97988ae4c', name: 'Rude Skov', region: 'Holte', lat: 55.833, lon: 12.443, travelMin: 30, habitats: ['bøg', 'eg', 'birk', 'løv'] },
   { id: '9b049416-0b36-4622-b087-5a65db7e80d0', name: 'Dyrehaven', region: 'Klampenborg', lat: 55.792, lon: 12.573, travelMin: 20, habitats: ['eg', 'bøg', 'græs', 'gammelskov'] },
-  { id: 'fc66ca9d-3142-4934-9044-9e4cf09e8880', name: 'Vestskoven', region: 'Albertslund', lat: 55.684, lon: 12.341, travelMin: 25, habitats: ['løv', 'ungskov', 'lysning'] },
-  { id: '4ba0bee5-69f1-4b01-a810-590e1840e5f7', name: 'Hareskoven', region: 'Værløse', lat: 55.767, lon: 12.383, travelMin: 25, habitats: ['bøg', 'gran', 'løv'] },
-  { id: '6c6fb8d0-4f0b-4dc3-9cad-4c0c1daf6888', name: 'Jægersborg Hegn', region: 'Skodsborg', lat: 55.812, lon: 12.552, travelMin: 24, habitats: ['bøg', 'eg', 'dødttræ'] },
-  { id: '4c3004fd-fe58-424c-883d-3f5412ec53ec', name: 'Store Dyrehave', region: 'Hillerød', lat: 55.912, lon: 12.318, travelMin: 48, habitats: ['bøg', 'gran', 'mos'] },
-  { id: 'c74f6597-fc37-47da-82ea-ff3928160be0', name: 'Tokkekøb Hegn', region: 'Allerød', lat: 55.887, lon: 12.394, travelMin: 42, habitats: ['gran', 'bøg', 'sur'] },
-  { id: 'bad68cfd-a072-408e-bb9d-ab786e8bddff', name: 'Boserup Skov', region: 'Roskilde', lat: 55.652, lon: 12.024, travelMin: 45, habitats: ['bøg', 'løv', 'lysning'] },
+  { id: 'fc66ca9d-3142-4934-9044-9e4cf09e8880', name: 'Vestskoven', region: 'Albertslund', lat: 55.684, lon: 12.341, travelMin: 25, habitats: ['eg', 'bøg', 'gran', 'løv', 'kalkrig', 'lysning'] },
+  { id: '4ba0bee5-69f1-4b01-a810-590e1840e5f7', name: 'Hareskoven', region: 'Værløse', lat: 55.767, lon: 12.383, travelMin: 25, habitats: ['bøg', 'eg', 'gran', 'mose', 'lysning'] },
+  { id: '6c6fb8d0-4f0b-4dc3-9cad-4c0c1daf6888', name: 'Jægersborg Hegn', region: 'Skodsborg', lat: 55.812, lon: 12.552, travelMin: 24, habitats: ['bøg', 'eg', 'ask', 'birk', 'dødttræ'] },
+  { id: '4c3004fd-fe58-424c-883d-3f5412ec53ec', name: 'Store Dyrehave', region: 'Hillerød', lat: 55.912, lon: 12.318, travelMin: 48, habitats: ['bøg', 'eg', 'ask', 'el', 'birk', 'gran', 'sandet'] },
+  { id: 'c74f6597-fc37-47da-82ea-ff3928160be0', name: 'Tokkekøb Hegn', region: 'Allerød', lat: 55.887, lon: 12.394, travelMin: 42, habitats: ['gran', 'bøg', 'sur', 'mose'] },
+  { id: 'bad68cfd-a072-408e-bb9d-ab786e8bddff', name: 'Boserup Skov', region: 'Roskilde', lat: 55.652, lon: 12.024, travelMin: 45, habitats: ['bøg', 'eg', 'ask', 'kalkrig', 'mose'] },
+  { id: 'f845750f-57c3-423d-be44-34aa8dfe45f6', name: 'Teglstrup Hegn', region: 'Helsingør', lat: 56.028, lon: 12.560, travelMin: 50, habitats: ['bøg', 'ask', 'el', 'eg', 'sandet', 'mose'] },
+  { id: '6e2694f0-1bcf-4906-a750-79169dc3aafe', name: 'Gurre Vang', region: 'Helsingør', lat: 56.000, lon: 12.533, travelMin: 50, habitats: ['bøg', 'eg', 'gran', 'birk', 'el', 'mose'] },
+  { id: 'd6c9d6ff-0632-4e80-b242-5c40aa157761', name: 'Bidstrup Skovene', region: 'Hvalsø', lat: 55.601, lon: 11.852, travelMin: 50, habitats: ['bøg', 'gran', 'løv', 'kalkrig', 'mose', 'lysning'] },
+  { id: '5802859a-0eb8-4d4f-8391-bee51d3de7ce', name: 'Sorø Sønderskov', region: 'Sorø', lat: 55.411, lon: 11.554, travelMin: 60, habitats: ['bøg', 'eg', 'ask', 'el', 'mose'] },
+  { id: 'a8153129-ee04-48e3-b4d0-4713fe07013f', name: 'Faksinge Skov', region: 'Præstø', lat: 55.132, lon: 12.030, travelMin: 70, habitats: ['bøg', 'eg', 'ask', 'mose'] },
 ];
 
 /**
@@ -111,21 +126,21 @@ export const SPOTS: Spot[] = [
 export const SPECIES: CatalogSpecies[] = [
   {
     nameDa: 'Kantarel', nameLat: 'Cantharellus cibarius', risk: 'low',
-    window: [5, 9], rainMm: 14, habitats: ['bøg', 'mos', 'løv', 'sur'],
+    window: [5, 9], rainMm: 14, habitats: ['bøg', 'mos', 'løv', 'sur', 'fyr', 'sandet', 'birk'],
     warn: 'Forveksles med falsk kantarel og olivenbrun kantarelrørhat. Tjek de nedløbende <b>ribber</b> — ikke ægte lameller — og den svage abrikoslugt.',
     // Svampeatlas: "(maj-) juni-oktober (-december)"
     season: { core: [6, 7, 8, 9, 10], extended: [5, 6, 7, 8, 9, 10, 11, 12], sourceUrl: 'https://svampe.databasen.org/taxon/11317' },
   },
   {
     nameDa: 'Spiselig rørhat (Karl Johan)', nameLat: 'Boletus edulis', risk: 'low',
-    window: [6, 11], rainMm: 18, habitats: ['gran', 'bøg', 'mos', 'gammelskov'],
+    window: [6, 11], rainMm: 18, habitats: ['gran', 'bøg', 'mos', 'gammelskov', 'sur'],
     warn: 'Forveksles med galderørhat, som er ubrugelig af bitterhed. Rør-laget er hvidt til gulgrønt hos Karl Johan, lyserødt hos galderørhatten.',
     // Svampeatlas: "(juni-) juli-oktober (november)"
     season: { core: [7, 8, 9, 10], extended: [6, 7, 8, 9, 10, 11], sourceUrl: 'https://svampe.databasen.org/taxon/11069' },
   },
   {
     nameDa: 'Tragtkantarel', nameLat: 'Craterellus tubaeformis', risk: 'low',
-    window: [7, 13], rainMm: 16, habitats: ['gran', 'mos', 'sur', 'fyr'],
+    window: [7, 13], rainMm: 16, habitats: ['gran', 'mos', 'sur', 'fyr', 'bøg'],
     warn: 'Få farlige forvekslinger, men vokser tit i tætte tæpper — tag kun en del af bestanden, så mycelium og fællesskab har noget til næste år.',
     // Svampeatlas: "kan komme frem fra midt på sommeren i våde år, men den
     // topper typisk sent på sæsonen og helt ind i vinteren"
@@ -178,6 +193,8 @@ export const HABITATS: string[] = [
   'Mosset klit / fyr',
   'På dødt træ / stub',
   'Græsplæne / eng',
+  'Elle- eller askesump',
+  'Kalkrig muldbund',
 ];
 
 /** De tre billeder bestemmelsen beder om, i rækkefølge. */
