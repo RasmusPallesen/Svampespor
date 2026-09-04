@@ -300,6 +300,7 @@ select:focus, input:focus, textarea:focus, button:focus-visible, .spot-chip:focu
 textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
 .field { margin-bottom: 14px; }
 .field-row { display: grid; grid-template-columns: 1fr 88px; gap: 10px; }
+.field-row-even { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .btn {
   width: 100%; background: var(--lichen); color: var(--loam); border: none; font-family: var(--body); font-weight: 600;
   font-size: 14px; padding: 13px; border-radius: 8px; cursor: pointer; transition: filter 0.18s, background 0.18s;

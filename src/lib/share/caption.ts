@@ -50,6 +50,7 @@ export async function buildCaption(
         species: f.species,
         quantity: f.quantity,
         habitat: f.habitat,
+        soil: f.soil,
         spot: blur ? `omkring ${f.spotName}` : f.spotName,
         note: f.note,
         snapshot: f.snapshot,

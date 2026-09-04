@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { HABITATS, SHOT_SLOTS, SPECIES, findSpecies, findSpot } from '../data/catalog';
+import { HABITATS, SOIL_TYPES, SHOT_SLOTS, SPECIES, findSpecies, findSpot } from '../data/catalog';
 import { identify } from '../lib/id/identify';
 import { shrink } from '../lib/id/shrink';
 import type { Candidate, IdResult, Shot } from '../lib/id/types';
@@ -22,6 +22,7 @@ export function BestemView() {
   const captureLocation = useCaptureLocation();
   const [shots, setShots] = useState<(Shot | null)[]>([null, null, null]);
   const [habitat, setHabitat] = useState(HABITATS[0]);
+  const [soil, setSoil] = useState(SOIL_TYPES[0]);
   const [obs, setObs] = useState('');
   const [result, setResult] = useState<Result>({ kind: 'idle' });
 
@@ -55,6 +56,7 @@ export function BestemView() {
       const data = await identify({
         images: chosen.map((o) => (o.s as Shot).b64),
         habitat,
+        soil,
         observations: obs,
         order: chosen.map((o) => SHOT_SLOTS[o.i].cap),
       });
@@ -75,6 +77,7 @@ export function BestemView() {
         species: c.name_da,
         speciesLat: c.name_lat,
         habitat,
+        soil,
         quantity: '1',
         spotId: spot.id,
         spotName: spot.name,
@@ -150,11 +153,19 @@ export function BestemView() {
         </div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
 
-        <div className="field">
-          <label htmlFor="bHab">Voksested</label>
-          <select id="bHab" value={habitat} onChange={(e) => setHabitat(e.target.value)}>
-            {HABITATS.map((h) => <option key={h}>{h}</option>)}
-          </select>
+        <div className="field field-row-even">
+          <div>
+            <label htmlFor="bHab">Voksested</label>
+            <select id="bHab" value={habitat} onChange={(e) => setHabitat(e.target.value)}>
+              {HABITATS.map((h) => <option key={h}>{h}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="bJord">Jordtype</label>
+            <select id="bJord" value={soil} onChange={(e) => setSoil(e.target.value)}>
+              {SOIL_TYPES.map((j) => <option key={j}>{j}</option>)}
+            </select>
+          </div>
         </div>
         <div className="field">
           <label htmlFor="bObs">Hvad mærker du? (lugt, konsistens, farveskift ved snit)</label>

@@ -26,7 +26,7 @@ const TONE: Record<string, string> = {
 
 interface Snapshot { rain14: number; daysSince: number; rh: number; tmax: number; }
 interface Body {
-  species?: string; quantity?: string; habitat?: string; spot?: string;
+  species?: string; quantity?: string; habitat?: string; soil?: string; spot?: string;
   note?: string; snapshot?: Snapshot; platform?: string;
 }
 
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
 
   const prompt = `Skriv en billedtekst på dansk til et opslag om et svampefund. Svar KUN med selve teksten, ingen forklaring, ingen anførselstegn.
 
-Fundet: ${b.species}, ${b.quantity} stk, ${b.habitat}, ${b.spot}.
+Fundet: ${b.species}, ${b.quantity} stk, ${b.habitat}${b.soil && b.soil !== 'Ved ikke' ? ', ' + b.soil : ''}, ${b.spot}.
 Vejret: det regnede ${s.rain14} mm over fjorten dage, fundet kom ${s.daysSince} dage efter regnen, luftfugtighed ${s.rh}%, ${s.tmax}°.
 ${b.note ? 'Samlerens egen note: ' + b.note : ''}
 

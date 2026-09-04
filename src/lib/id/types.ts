@@ -37,6 +37,7 @@ export interface Shot {
 export interface IdentifyInput {
   images: string[];
   habitat: string;
+  soil: string;
   observations: string;
   /** billedernes rækkefølge, fx ["Hatten ovenfra", "Undersiden …"] */
   order: string[];

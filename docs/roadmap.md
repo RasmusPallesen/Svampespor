@@ -15,6 +15,7 @@
 - [ ] Rediger og slet fund
 
 ## Fase 2 — felten
+- [x] "Voksested" i log/bestem splittet i to felter: Voksested (biom/træ) og Jordtype (muldbund/morbund/kalkrig/sandet/mose/ved ikke), sourcet fra samme jordbundsviden som docs/spots.md. Sendes nu også med til Bestems AI-prompt og delingens billedtekst
 - [ ] Kort med steder og egne nåle (MapLibre + PostGIS) — positionsdata findes nu på fund, mangler kortvisning
 - [ ] Hemmelige nåle med klientside-kryptering
 - [ ] Billedupload til Supabase Storage, tre slots (i dag: data-URL'er i session)

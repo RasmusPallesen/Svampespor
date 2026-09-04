@@ -46,6 +46,8 @@ export interface FindRecord {
   species: string;
   speciesLat?: string;
   habitat: string;
+  /** Jordtype — adskilt fra `habitat` (voksested/biom). Tom streng for ældre fund logget før feltet fandtes. */
+  soil: string;
   quantity: string;
   spotId: string;
   spotName: string;
@@ -73,6 +75,7 @@ export interface FindInput {
   species: string;
   speciesLat?: string;
   habitat: string;
+  soil: string;
   quantity: string;
   spotId: string;
   spotName: string;

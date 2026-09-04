@@ -23,6 +23,7 @@ export async function identify(input: IdentifyInput): Promise<IdResult> {
     body: {
       images: input.images,
       habitat: input.habitat,
+      soil: input.soil,
       observations: input.observations,
       order: input.order,
     },

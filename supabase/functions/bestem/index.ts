@@ -42,6 +42,7 @@ Svar KUN med rå JSON, ingen indledning og ingen markdown-backticks:
 interface Body {
   images?: string[];
   habitat?: string;
+  soil?: string;
   observations?: string;
   order?: string[];
 }
@@ -67,6 +68,7 @@ Deno.serve(async (req) => {
 
   const ctx =
     `Voksested: ${body.habitat ?? 'ukendt'}.` +
+    (body.soil && body.soil !== 'Ved ikke' ? ` Jordtype: ${body.soil}.` : '') +
     (body.observations?.trim()
       ? ` Samlerens egne iagttagelser: ${body.observations.trim()}`
       : ' Samleren har ikke noteret lugt eller konsistens.') +
