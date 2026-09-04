@@ -24,7 +24,7 @@ export function FaellesView() {
 
       <div className="panel">
         <div className="panel-label"><span>Sæsonens jagt</span><span style={{ color: 'var(--gold)' }}>Uge 35</span></div>
-        <div className="bestday" style={{ marginTop: 0 }}>
+        <div className="bestday" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
           <div className="num">17</div>
           <div className="txt"><b>Årets første tragtkantarel</b>17 svampejægere har meldt fund i Nordsjælland i denne uge.</div>
         </div>
