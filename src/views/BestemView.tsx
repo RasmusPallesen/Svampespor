@@ -164,15 +164,22 @@ export function BestemView() {
         <button className="btn" onClick={run} disabled={result.kind === 'analysing'}>Bestem art</button>
       </div>
 
-      <IdResultPanel result={result} onPick={saveCandidate} />
+      <IdResultPanel result={result} shots={shots} onPick={saveCandidate} />
     </>
   );
 }
 
 /* ------------------------------------------------------------------ */
 
-function IdResultPanel({ result, onPick }: { result: Result; onPick: (c: Candidate) => void }) {
+function IdResultPanel({ result, shots, onPick }: { result: Result; shots: (Shot | null)[]; onPick: (c: Candidate) => void }) {
   if (result.kind === 'idle') return null;
+
+  const ownShots = shots.filter((s): s is Shot => Boolean(s));
+  const ownPhotos = ownShots.length > 0 && (
+    <div className="own-shots">
+      {ownShots.map((s, i) => <img key={i} src={s.url} alt="Dit eget billede" />)}
+    </div>
+  );
 
   if (result.kind === 'analysing') {
     return (
@@ -204,6 +211,7 @@ function IdResultPanel({ result, onPick }: { result: Result; onPick: (c: Candida
   if (!r.candidates?.length) {
     return (
       <div className="panel">
+        {ownPhotos}
         <div className="qbar"><i style={{ background: qcol }} />{qtxt}</div>
         <div className="empty">{r.quality_note || 'Der er ikke nok i billederne til at pege på en art.'}</div>
         {r.missing_evidence?.length > 0 && (
@@ -216,6 +224,7 @@ function IdResultPanel({ result, onPick }: { result: Result; onPick: (c: Candida
   return (
     <>
       <div className="panel">
+        {ownPhotos}
         <div className="qbar"><i style={{ background: qcol }} />{qtxt}{r.quality_note ? ` · ${r.quality_note}` : ''}</div>
         <div className="panel-label" style={{ marginBottom: 12 }}>Kandidater</div>
         {r.candidates.map((c, i) => {
