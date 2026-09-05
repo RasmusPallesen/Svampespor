@@ -14,9 +14,10 @@ import {
 import { SPECIES, SPOTS, type CatalogSpecies } from '../data/catalog';
 import { simulateWeather } from '../data/demoWeather';
 import { signInWithApple, signInWithGoogle, signInWithMagicLink, signOutAuth } from '../lib/auth/auth';
+import { enqueueFind, isOfflineLikeError, listQueuedFinds, removeQueuedFind } from '../lib/data/offlineQueue';
 import { getRepo } from '../lib/data/repo';
 import { getSupabase } from '../lib/data/supabaseClient';
-import type { FindInput, FindRecord, Profile, ProfilePrefs, SpeciesProposal } from '../lib/data/types';
+import type { FindInput, FindRecord, FindUpdate, Profile, ProfilePrefs, SpeciesProposal } from '../lib/data/types';
 import type { WeatherSeries } from '../lib/weather/model';
 import { fetchForSpots } from '../lib/weather/openMeteo';
 import type { Relation } from '../lib/spots/ranking';
@@ -49,7 +50,11 @@ interface AppState {
   weatherReady: boolean;
 
   finds: FindRecord[];
+  /** Antal fund, der ligger i den lokale offline-kø og afventer forbindelse. */
+  pendingFinds: number;
   addFind(input: FindInput): Promise<void>;
+  updateFind(id: string, patch: FindUpdate): Promise<void>;
+  deleteFind(id: string): Promise<void>;
   setShared(id: string, shared: boolean): Promise<void>;
 
   profile: Profile | null;
@@ -124,6 +129,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [weatherReady, setWeatherReady] = useState(false);
 
   const [finds, setFinds] = useState<FindRecord[]>([]);
+  const [pendingFinds, setPendingFinds] = useState(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [communitySpecies, setCommunitySpecies] = useState<CatalogSpecies[]>([]);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -239,10 +245,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const allSpecies = useMemo(() => [...SPECIES, ...communitySpecies], [communitySpecies]);
 
-  /* ---- fund ---- */
+  /* ---- fund ----
+   * addFind prøver Supabase først; fejler den fordi der reelt ikke er
+   * forbindelse (isOfflineLikeError), lægges fundet i den lokale kø i
+   * stedet for at fejle synligt — det er hele pointen med at stå i en skov
+   * uden dækning stadig kan logge et fund. En rigtig fejl (ikke logget ind,
+   * RLS, validering) kastes videre som før, uændret for LogView/BestemView.
+   */
+  const flushingRef = useRef(false);
+  const flushQueue = useCallback(async () => {
+    if (flushingRef.current) return;
+    flushingRef.current = true;
+    try {
+      const queued = await listQueuedFinds().catch(() => []);
+      setPendingFinds(queued.length);
+      for (const q of queued) {
+        try {
+          const rec = await repo.addFind(q.input);
+          await removeQueuedFind(q.localId).catch(() => {});
+          // Erstat en evt. placeholder fra addFind i denne session — eller
+          // sæt fundet ind på ny, hvis det stod i køen fra en tidligere
+          // session, der blev lukket, før forbindelsen kom tilbage (så det
+          // aldrig blev til en placeholder i det nuværende `finds`).
+          setFinds((prev) => {
+            const exists = prev.some((f) => f.id === q.localId);
+            return exists ? prev.map((f) => (f.id === q.localId ? rec : f)) : [rec, ...prev];
+          });
+          setPendingFinds((n) => Math.max(0, n - 1));
+        } catch {
+          // Stadig ingen forbindelse (eller samme fejl gentager sig) — stop
+          // denne runde, prøv igen ved næste 'online'-event eller boot.
+          break;
+        }
+      }
+    } finally {
+      flushingRef.current = false;
+    }
+  }, [repo]);
+
+  useEffect(() => {
+    flushQueue(); // fund fra en tidligere session, der aldrig nåede at synkronisere
+    window.addEventListener('online', flushQueue);
+    return () => window.removeEventListener('online', flushQueue);
+  }, [flushQueue]);
+
   const addFind = useCallback(async (input: FindInput) => {
-    const rec = await repo.addFind(input);
-    setFinds((prev) => [rec, ...prev]);
+    try {
+      const rec = await repo.addFind(input);
+      setFinds((prev) => [rec, ...prev]);
+      void flushQueue(); // lykkedes dette, er der tydeligvis forbindelse igen
+    } catch (err) {
+      if (!isOfflineLikeError(err)) throw err;
+      const queued = await enqueueFind(input);
+      setPendingFinds((n) => n + 1);
+      setFinds((prev) => [{ ...input, id: queued.localId, shared: false, pending: true }, ...prev]);
+    }
+  }, [repo, flushQueue]);
+
+  const updateFind = useCallback(async (id: string, patch: FindUpdate) => {
+    const rec = await repo.updateFind(id, patch);
+    setFinds((prev) => prev.map((f) => (f.id === id ? rec : f)));
+  }, [repo]);
+
+  const deleteFind = useCallback(async (id: string) => {
+    await repo.deleteFind(id);
+    setFinds((prev) => prev.filter((f) => f.id !== id));
   }, [repo]);
 
   const setShared = useCallback(async (id: string, shared: boolean) => {
@@ -344,7 +411,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     repoPersistent: repo.persistent,
     today,
     weather, live, weatherReady,
-    finds, addFind, setShared,
+    finds, pendingFinds, addFind, updateFind, deleteFind, setShared,
     profile, createProfile, logOut, setHandle, togglePref,
     authUser, authReady, authWithGoogle, authWithApple, authWithMagicLink,
     activeSpotId, setActiveSpot: setActiveSpotId,

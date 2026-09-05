@@ -1,0 +1,17 @@
+-- Fund kan nu redigeres og få tilføjet fotos efter de er gemt.
+--
+-- Vigtigst: et sporeaftryk tager 2-12 timer at fremkalde, så det er
+-- sjældent klart, når selve fundet først logges. Uden en redigeringsvej
+-- havde det opfølgende bevis intetsteds at gå hen. RLS tillader det
+-- allerede — `finds_own` (migration 0001) er "for all", altså også update
+-- og delete for ejeren, ikke kun insert/select.
+--
+-- Fotos ligger som data-URL'er direkte på rækken (jsonb-array), samme som
+-- i sessionslaget — IKKE den tiltænkte arkitektur. `find_photos`-tabellen
+-- (migration 0001) med `storage_path` ligger klar til rigtig Supabase
+-- Storage-baseret upload, men det er stadig ubygget (se docs/roadmap.md).
+-- Denne kolonne er en bevidst midlertidig løsning: kompressionen i
+-- src/lib/id/shrink.ts holder hvert billede på et par hundrede KB, hvilket
+-- Postgres håndterer fint i den skala, appen kører i i dag — men det er
+-- ikke, hvad man ville bygge til tusindvis af brugere.
+alter table finds add column photos jsonb not null default '[]'::jsonb;

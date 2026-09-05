@@ -301,6 +301,27 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
 .field { margin-bottom: 14px; }
 .field-row { display: grid; grid-template-columns: 1fr 88px; gap: 10px; }
 .field-row-even { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---------- søgbar artsvælger ---------- */
+.species-pick { position: relative; }
+.species-pick-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30;
+  background: var(--raised); border: 1px solid var(--bark); border-radius: 10px;
+  max-height: 280px; overflow-y: auto; padding: 6px; box-shadow: 0 12px 28px rgba(8, 10, 6, 0.45);
+}
+.species-pick-group {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--mute); padding: 8px 10px 4px;
+}
+.species-pick-opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; text-align: left;
+  background: none; border: none; color: var(--paper); font-family: var(--body); font-size: 14px;
+  padding: 8px 10px; border-radius: 7px; cursor: pointer; transition: background 0.15s;
+}
+.species-pick-opt:hover, .species-pick-opt:focus-visible { background: var(--humus); }
+.species-pick-opt.sel { color: var(--lichen); }
+.species-pick-opt i { font-family: var(--mono); font-size: 10.5px; color: var(--mute); font-style: italic; }
+.species-pick-empty { padding: 10px; font-size: 12.5px; color: var(--mute); text-align: center; }
 .btn {
   width: 100%; background: var(--lichen); color: var(--loam); border: none; font-family: var(--body); font-weight: 600;
   font-size: 14px; padding: 13px; border-radius: 8px; cursor: pointer; transition: filter 0.18s, background 0.18s;
@@ -340,6 +361,21 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
   border: 1px solid var(--bark); color: var(--mute); padding: 2px 7px; border-radius: 99px; margin-left: 8px; white-space: nowrap;
 }
 .src-tag.ai { color: var(--rain); border-color: rgba(109, 169, 201, 0.4); }
+.src-tag.pending { color: var(--gold); border-color: rgba(227, 167, 60, 0.4); }
+.pending-note {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--gold);
+  background: rgba(227, 167, 60, 0.08); border: 1px solid rgba(227, 167, 60, 0.3);
+  border-radius: 8px; padding: 9px 11px; line-height: 1.5;
+}
+/* ---------- redigering af fund ---------- */
+.edit-shots { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.edit-shot { position: relative; width: 72px; height: 72px; border-radius: 9px; overflow: hidden; border: 1px solid var(--bark); flex: 0 0 auto; }
+.edit-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.edit-shot .x {
+  position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(20, 23, 15, 0.85); border: 1px solid var(--bark); color: var(--paper);
+  font-size: 11px; line-height: 16px; cursor: pointer; padding: 0;
+}
 .snap { display: flex; gap: 0; background: var(--loam); border: 1px solid var(--bark); border-radius: 8px; overflow: hidden; }
 .snap div { flex: 1; padding: 8px 6px; text-align: center; border-right: 1px solid var(--bark); }
 .snap div:last-child { border-right: none; }
@@ -594,6 +630,8 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
   letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; padding: 12px 0 0; border-bottom: 1px solid var(--bark);
 }
 .link-btn:hover { color: var(--lichen); }
+.link-btn.danger { color: var(--toxic); border-bottom-color: rgba(210, 84, 60, 0.3); }
+.link-btn.danger:hover { color: var(--toxic); filter: brightness(1.3); }
 .rank-fw {
   display: flex; align-items: center; gap: 7px; margin-top: 8px; font-family: var(--mono); font-size: 9px;
   letter-spacing: 0.07em; text-transform: uppercase; color: var(--mute); line-height: 1.4;

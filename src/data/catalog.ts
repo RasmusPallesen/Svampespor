@@ -214,6 +214,54 @@ export const SOIL_TYPES: string[] = [
   'Ved ikke',
 ];
 
+/**
+ * Første tag i `spot.habitats`, der har en kendt oversættelse — arrayet er
+ * skrevet med det mest fremtrædende tag først (jf. docs/spots.md' kilder),
+ * så "første match" er reelt "mest fremtrædende match", ikke en vilkårlig
+ * en. Kun en foreslået startværdi: brugeren kan altid rette den i formularen.
+ */
+const VOKSESTED_FRA_TAG: Record<string, string> = {
+  klit: 'Fyrreskov / klitplantage',
+  fyr: 'Fyrreskov / klitplantage',
+  el: 'Elle- eller askesump',
+  ask: 'Elle- eller askesump',
+  gran: 'Granskov / nåleskov',
+  eg: 'Egeskov',
+  bøg: 'Bøgeskov',
+  løv: 'Blandet løvskov',
+  lysning: 'Skovbryn / lysning',
+  dødttræ: 'På dødt træ / stub',
+  græs: 'Græsplæne / eng',
+};
+
+const JORDTYPE_FRA_TAG: Record<string, string> = {
+  kalkrig: 'Kalkrig moræneler',
+  sandet: 'Sandet, næringsfattig',
+  mose: 'Mose / vådbund (tørv)',
+  sur: 'Morbund (sur, næringsfattig)',
+};
+
+/**
+ * Foreslår et Voksested ud fra det aktive steds kendte trævalg. Rammer intet
+ * tag (fx en Tier 2-art uden stedsdata, eller et brugeroprettet sted), falder
+ * tilbage til den første mulighed — samme startpunkt som før denne funktion.
+ */
+export function suggestHabitat(spot: Pick<Spot, 'habitats'> | undefined): string {
+  const hit = spot?.habitats.find((h) => h in VOKSESTED_FRA_TAG);
+  return (hit && VOKSESTED_FRA_TAG[hit]) || HABITATS[0];
+}
+
+/**
+ * Foreslår en Jordtype ud fra det aktive steds kendte jordbund. Ingen af de
+ * specifikke jordtags (kalkrig/sandet/mose/sur) betyder ikke "ukendt" her —
+ * det betyder oftest almindelig sjællandsk moræneler, altså muldbund, jf.
+ * docs/spots.md' indledende note om Sjællands jordbund generelt.
+ */
+export function suggestSoil(spot: Pick<Spot, 'habitats'> | undefined): string {
+  const hit = spot?.habitats.find((h) => h in JORDTYPE_FRA_TAG);
+  return (hit && JORDTYPE_FRA_TAG[hit]) || SOIL_TYPES[0];
+}
+
 /** De tre billeder bestemmelsen beder om, i rækkefølge. */
 export const SHOT_SLOTS = [
   { k: 'hat', cap: 'Hatten ovenfra', req: 'vigtig' },

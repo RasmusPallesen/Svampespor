@@ -68,6 +68,29 @@ export interface FindRecord {
    * aldrig denne selv.
    */
   geo?: GeoPoint | null;
+  /**
+   * Sat mens fundet kun ligger i den lokale offline-kø (se `offlineQueue.ts`)
+   * og endnu ikke er skrevet til Supabase — fx logget uden dækning i skoven.
+   * `id` er da et lokalt kø-id, ikke en rigtig database-UUID, så deling og
+   * redigering er slået fra i UI'et, indtil fundet er synkroniseret.
+   */
+  pending?: boolean;
+}
+
+/**
+ * Felter man kan rette på et allerede gemt fund. Bevidst IKKE art eller
+ * kilde — at omklassificere et fund er en større handling (påvirker Tier
+ * 2-forslag, tillid til AI-konfidencen) end at rette voksested eller
+ * tilføje et sporeaftryksbillede, som er den primære grund til at redigere
+ * et fund: sporeaftryk tager timer at fremkalde, og er ofte slet ikke klar,
+ * da fundet først blev logget.
+ */
+export interface FindUpdate {
+  habitat?: string;
+  soil?: string;
+  quantity?: string;
+  note?: string;
+  photos?: string[];
 }
 
 /** Det, der skal til for at oprette et fund — resten udfylder datalaget. */

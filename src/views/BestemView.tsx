@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { HABITATS, SOIL_TYPES, SHOT_SLOTS, SPECIES, findSpecies, findSpot } from '../data/catalog';
+import { HABITATS, SOIL_TYPES, SHOT_SLOTS, SPECIES, findSpecies, findSpot, suggestHabitat, suggestSoil } from '../data/catalog';
 import { identify } from '../lib/id/identify';
 import { shrink } from '../lib/id/shrink';
 import type { Candidate, IdResult, Shot } from '../lib/id/types';
@@ -21,8 +21,8 @@ export function BestemView() {
   const { weather, activeSpotId, addFind, ensureSpecies, today, goto, showToast } = useApp();
   const captureLocation = useCaptureLocation();
   const [shots, setShots] = useState<(Shot | null)[]>([null, null, null]);
-  const [habitat, setHabitat] = useState(HABITATS[0]);
-  const [soil, setSoil] = useState(SOIL_TYPES[0]);
+  const [habitat, setHabitat] = useState(() => suggestHabitat(findSpot(activeSpotId)));
+  const [soil, setSoil] = useState(() => suggestSoil(findSpot(activeSpotId)));
   const [obs, setObs] = useState('');
   const [result, setResult] = useState<Result>({ kind: 'idle' });
 
