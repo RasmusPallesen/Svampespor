@@ -79,11 +79,13 @@ function Nav() {
 }
 
 /**
- * Vælg aktivt skovområde. Var en vandret chip-række — voksede ubrugeligt
- * bredt, så snart man havde flere fastgjorte/fulgte steder end skærmen
- * kunne vise ad gangen (bl.a. egne GPS-tilføjede steder, der lægger sig
- * bagest). En dropdown har ingen breddegrænse og viser altid det aktive
- * sted, uanset hvor mange man har.
+ * Vælg aktivt skovområde. Var en vandret chip-række begrænset til
+ * fastgjorte/fulgte steder — en nødvendig begrænsning, når bredden var
+ * knap. Viste kun 5-6 af de nu 16 kendte steder, og skjulte resten af
+ * kataloget (inkl. egne tilføjede, der ikke var blevet fulgt eksplicit)
+ * fuldstændig fra vælgeren. En dropdown har ingen breddegrænse, så alle
+ * ikke-skjulte steder er med — grupperet, så fastgjort/fulgt stadig
+ * topper listen.
  */
 function SpotSelect() {
   const { view, activeSpotId, setActiveSpot, goto, relations, allSpots } = useApp();
@@ -92,13 +94,16 @@ function SpotSelect() {
   const rel = (id: string) => relations[id] ?? null;
   const pinned = allSpots.filter((s) => rel(s.id) === 'pinned');
   const followed = allSpots.filter((s) => rel(s.id) === 'followed');
-  if (pinned.length === 0 && followed.length === 0) return null;
-
-  // Det aktive sted kan i princippet være valgt uden om denne liste (fx via
-  // "Bedst i dag"-rangeringen, uden at være fastgjort/fulgt) — uden dette
-  // ville <select> enten vise et forkert sted som valgt, eller intet.
   const known = new Set([...pinned, ...followed].map((s) => s.id));
-  const active = !known.has(activeSpotId) ? allSpots.find((s) => s.id === activeSpotId) : undefined;
+  const others = allSpots
+    .filter((s) => !known.has(s.id) && rel(s.id) !== 'hidden')
+    .sort((a, b) => a.name.localeCompare(b.name, 'da'));
+
+  // Kun et eksplicit skjult sted kan nu mangle fra listerne ovenfor — men er
+  // netop dét det aktive sted (man kan skjule det sted, man står på), skal
+  // <select> stadig vise det korrekt i stedet for et forkert eller intet valg.
+  const shown = new Set([...known, ...others.map((s) => s.id)]);
+  const active = !shown.has(activeSpotId) ? allSpots.find((s) => s.id === activeSpotId) : undefined;
 
   const pick = (id: string) => { setActiveSpot(id); goto('jagt'); };
 
@@ -119,6 +124,11 @@ function SpotSelect() {
         {followed.length > 0 && (
           <optgroup label="Fulgt">
             {followed.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </optgroup>
+        )}
+        {others.length > 0 && (
+          <optgroup label="Andre steder">
+            {others.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </optgroup>
         )}
       </select>
