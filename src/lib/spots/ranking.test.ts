@@ -153,6 +153,26 @@ describe('rankSpots', () => {
     for (let i = 1; i < r.length; i++) expect(r[i].score).toBeLessThanOrEqual(r[i - 1].score);
   });
 
+  it('viser et eget sted som "fulgt", selvom dets relation aldrig blev gemt', () => {
+    // Relations bor kun i localStorage, ikke i databasen — et eget sted, der
+    // dukker op på en ny enhed eller efter ryddet storage, skal stadig regnes
+    // for dit, ikke stille forsvinde fra "Mine steder"/stedvælgeren.
+    const mine = { ...spot('mit', 30), isUserSpot: true };
+    const r = rankSpots({
+      ...base, spots: [...spots, mine], weather: { ...base.weather, mit: series(7) },
+    });
+    expect(r.find((x) => x.spot.id === 'mit')?.relation).toBe('followed');
+  });
+
+  it('en eksplicit relation på et eget sted vinder stadig over standarden', () => {
+    const mine = { ...spot('mit', 30), isUserSpot: true };
+    const r = rankSpots({
+      ...base, spots: [...spots, mine], weather: { ...base.weather, mit: series(7) },
+      relations: { mit: 'hidden' }, includeHidden: true,
+    });
+    expect(r.find((x) => x.spot.id === 'mit')?.relation).toBe('hidden');
+  });
+
   it('ændrer rangeringen når du skifter art — vinduet flytter sig', () => {
     const TRAGT: Species = { ...KANTAREL, nameDa: 'Tragtkantarel', window: [7, 13], habitats: ['gran'] };
     const w = { tidlig: series(9), sen: series(3) };

@@ -173,7 +173,12 @@ export function rankSpots(args: {
   const out: RankedSpot[] = [];
 
   for (const spot of spots) {
-    const relation = relations[spot.id] ?? null;
+    // Et eget sted uden en gemt relation skal aldrig bare forsvinde fra
+    // "Mine steder"/stedvælgeren — det er per definition dit, i modsætning
+    // til et systemsted, hvor "ingen relation endnu" reelt betyder "ikke
+    // valgt". Kun en EKSPLICIT relation (fastgjort/skjult/fulgt) overstyrer
+    // denne standard, uanset om den kom fra det aktuelle apparat eller ej.
+    const relation = relations[spot.id] ?? (spot.isUserSpot ? 'followed' : null);
     if (relation === 'hidden' && !includeHidden) continue;
     const w = weather[spot.id];
     if (!w) continue;
