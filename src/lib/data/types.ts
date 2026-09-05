@@ -25,6 +25,12 @@ export interface UserSpotInput {
   lon: number;
 }
 
+/** Ret navn/egn på et eget sted — ikke position eller jordbund. */
+export interface UserSpotPatch {
+  name?: string;
+  region?: string;
+}
+
 /**
  * Forslag til en ny "fællesskabsart" — Tier 2, se docs/roadmap.md.
  *

@@ -13,7 +13,7 @@ import { communitySpeciesFrom, type CatalogSpecies } from '../../data/catalog';
 import type { Spot } from '../spots/ranking';
 import { SEED_FEED, seedFinds } from './seed';
 import { getSupabase } from './supabaseClient';
-import type { FeedItem, FindInput, FindRecord, FindUpdate, Profile, SpeciesProposal, UserSpotInput } from './types';
+import type { FeedItem, FindInput, FindRecord, FindUpdate, Profile, SpeciesProposal, UserSpotInput, UserSpotPatch } from './types';
 
 /** Rejsetid kan ikke afledes af GPS-koordinater alene — se `addUserSpot`-kommentaren. */
 const DEFAULT_USER_SPOT_TRAVEL_MIN = 20;
@@ -37,6 +37,8 @@ export interface Repo {
   /** Brugerens egne steder — kun synlige for dem selv (RLS), i modsætning til systemsteder. */
   listUserSpots(): Promise<Spot[]>;
   addUserSpot(input: UserSpotInput): Promise<Spot>;
+  updateUserSpot(id: string, patch: UserSpotPatch): Promise<Spot>;
+  deleteUserSpot(id: string): Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -124,9 +126,29 @@ class SessionRepo implements Repo {
       lon: input.lon,
       travelMin: DEFAULT_USER_SPOT_TRAVEL_MIN,
       habitats: [],
+      isUserSpot: true,
     };
     this.userSpots = [...this.userSpots, spot];
     return spot;
+  }
+
+  async updateUserSpot(id: string, patch: UserSpotPatch): Promise<Spot> {
+    let updated: Spot | undefined;
+    this.userSpots = this.userSpots.map((s) => {
+      if (s.id !== id) return s;
+      updated = {
+        ...s,
+        name: patch.name ?? s.name,
+        region: patch.region !== undefined ? (patch.region.trim() || 'Eget sted') : s.region,
+      };
+      return updated;
+    });
+    if (!updated) throw new Error('Sted findes ikke');
+    return updated;
+  }
+
+  async deleteUserSpot(id: string) {
+    this.userSpots = this.userSpots.filter((s) => s.id !== id);
   }
 }
 
@@ -323,18 +345,7 @@ class SupabaseRepo implements Repo {
       .eq('owner_id', uid)
       .order('created_at', { ascending: true });
     if (error) throw error;
-    return (data ?? []).map((r): Spot => ({
-      id: r.id,
-      name: r.name,
-      region: r.region ?? 'Eget sted',
-      lat: r.lat,
-      lon: r.lon,
-      // Rejsetid kan ikke afledes af koordinaterne alene, og `user_spots.travel_min`
-      // (skemaets tiltænkte plads til det) er ikke i brug endnu — samme
-      // pragmatiske grænse som resten af rangeringen kører med i dag.
-      travelMin: DEFAULT_USER_SPOT_TRAVEL_MIN,
-      habitats: [],
-    }));
+    return (data ?? []).map(mapUserSpotRow);
   }
 
   async addUserSpot(input: UserSpotInput): Promise<Spot> {
@@ -354,11 +365,44 @@ class SupabaseRepo implements Repo {
       .select('id, name, region, lat, lon')
       .single();
     if (error) throw error;
-    return {
-      id: data.id, name: data.name, region: data.region ?? 'Eget sted',
-      lat: data.lat, lon: data.lon, travelMin: DEFAULT_USER_SPOT_TRAVEL_MIN, habitats: [],
-    };
+    return mapUserSpotRow(data);
   }
+
+  async updateUserSpot(id: string, patch: UserSpotPatch): Promise<Spot> {
+    const row: Record<string, unknown> = {};
+    if (patch.name !== undefined) row.name = patch.name;
+    if (patch.region !== undefined) row.region = patch.region.trim() || null;
+    const { data, error } = await this.db
+      .from('spots')
+      .update(row)
+      .eq('id', id)
+      .select('id, name, region, lat, lon')
+      .single();
+    if (error) throw error;
+    return mapUserSpotRow(data);
+  }
+
+  async deleteUserSpot(id: string) {
+    const { error } = await this.db.from('spots').delete().eq('id', id);
+    if (error) throw error;
+  }
+}
+
+/** Delt mellem listUserSpots/addUserSpot/updateUserSpot, så de aldrig kan komme til at mappe forskelligt. */
+function mapUserSpotRow(r: { id: string; name: string; region: string | null; lat: number; lon: number }): Spot {
+  return {
+    id: r.id,
+    name: r.name,
+    region: r.region ?? 'Eget sted',
+    lat: r.lat,
+    lon: r.lon,
+    // Rejsetid kan ikke afledes af koordinaterne alene, og `user_spots.travel_min`
+    // (skemaets tiltænkte plads til det) er ikke i brug endnu — samme
+    // pragmatiske grænse som resten af rangeringen kører med i dag.
+    travelMin: DEFAULT_USER_SPOT_TRAVEL_MIN,
+    habitats: [],
+    isUserSpot: true,
+  };
 }
 
 /* ------------------------------------------------------------------ */

@@ -17,7 +17,7 @@ import { signInWithApple, signInWithGoogle, signInWithMagicLink, signOutAuth } f
 import { enqueueFind, isOfflineLikeError, listQueuedFinds, removeQueuedFind } from '../lib/data/offlineQueue';
 import { getRepo } from '../lib/data/repo';
 import { getSupabase } from '../lib/data/supabaseClient';
-import type { FindInput, FindRecord, FindUpdate, Profile, ProfilePrefs, SpeciesProposal, UserSpotInput } from '../lib/data/types';
+import type { FindInput, FindRecord, FindUpdate, Profile, ProfilePrefs, SpeciesProposal, UserSpotInput, UserSpotPatch } from '../lib/data/types';
 import type { WeatherSeries } from '../lib/weather/model';
 import { fetchForSpots } from '../lib/weather/openMeteo';
 import type { Relation, Spot } from '../lib/spots/ranking';
@@ -78,8 +78,12 @@ interface AppState {
 
   /** Systemsteder + brugerens egne, samlet — brug denne, ikke SPOTS direkte. */
   allSpots: Spot[];
-  /** Tilføjer et sted ud fra givne koordinater (typisk brugerens nuværende position). */
+  /** Tilføjer et sted ud fra givne koordinater (typisk brugerens nuværende position) og gør det aktivt med det samme. */
   addUserSpot(input: UserSpotInput): Promise<Spot>;
+  /** Ret navn/egn på et eget sted. Kun mulige på steder med `isUserSpot` (RLS afviser ellers alligevel). */
+  updateUserSpot(id: string, patch: UserSpotPatch): Promise<Spot>;
+  /** Sletter et eget sted. Falder tilbage til et systemsted, hvis det slettede var aktivt. */
+  deleteUserSpot(id: string): Promise<void>;
 
   targetSpecies: CatalogSpecies;
   setTargetSpeciesName(name: string): void;
@@ -220,8 +224,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const spot = await repo.addUserSpot(input);
     setUserSpots((prev) => [...prev, spot]);
     void fetchSpotWeather([spot]);
+    // Et nyt sted er per definition det, du står på lige nu — vis det med
+    // det samme i stedet for at lade brugeren selv lede det frem.
+    setActiveSpotId(spot.id);
     return spot;
-  }, [repo, fetchSpotWeather]);
+  }, [repo, fetchSpotWeather, setActiveSpotId]);
+
+  const updateUserSpot = useCallback(async (id: string, patch: UserSpotPatch) => {
+    const spot = await repo.updateUserSpot(id, patch);
+    setUserSpots((prev) => prev.map((s) => (s.id === id ? spot : s)));
+    return spot;
+  }, [repo]);
+
+  const deleteUserSpot = useCallback(async (id: string) => {
+    await repo.deleteUserSpot(id);
+    setUserSpots((prev) => prev.filter((s) => s.id !== id));
+    // Var det slettede sted aktivt, falder vi tilbage til et systemsted —
+    // ellers ville appen pege på et id, der ikke findes i allSpots mere.
+    if (activeSpotId === id) setActiveSpotId(SPOTS[0].id);
+  }, [repo, activeSpotId, setActiveSpotId]);
 
   const allSpots = useMemo(() => [...SPOTS, ...userSpots], [userSpots]);
 
@@ -488,7 +509,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     profile, createProfile, logOut, setHandle, togglePref,
     authUser, authReady, authWithGoogle, authWithApple, authWithMagicLink,
     activeSpotId, setActiveSpot: setActiveSpotId,
-    allSpots, addUserSpot,
+    allSpots, addUserSpot, updateUserSpot, deleteUserSpot,
     targetSpecies, setTargetSpeciesName: setTargetName,
     allSpecies, ensureSpecies,
     relations, cycleRelation,

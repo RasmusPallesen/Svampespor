@@ -99,7 +99,9 @@ export function SpotPanel() {
  * forsvinde i en tom relations-tilstand.
  */
 function AddSpotForm() {
-  const { addUserSpot, cycleRelation, setActiveSpot, goto, showToast } = useApp();
+  // addUserSpot gør selv stedet aktivt med det samme (AppContext) — et nyt
+  // sted er per definition der, du står lige nu, ikke noget man skal lede efter.
+  const { addUserSpot, cycleRelation, goto, showToast } = useApp();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [region, setRegion] = useState('');
@@ -115,7 +117,6 @@ function AddSpotForm() {
       const { lat, lon } = await getCurrentPosition();
       const spot = await addUserSpot({ name: trimmed, region: region.trim(), lat, lon });
       cycleRelation(spot.id, 'followed');
-      setActiveSpot(spot.id);
       showToast(`${spot.name} tilføjet`);
       reset();
       goto('jagt');
