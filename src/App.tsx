@@ -28,7 +28,7 @@ function Shell() {
     <div className="app">
       <Header />
       <Nav />
-      <SpotChips />
+      <SpotSelect />
       <PassiveBand />
 
       <div className="view on">
@@ -78,29 +78,51 @@ function Nav() {
   );
 }
 
-function SpotChips() {
+/**
+ * Vælg aktivt skovområde. Var en vandret chip-række — voksede ubrugeligt
+ * bredt, så snart man havde flere fastgjorte/fulgte steder end skærmen
+ * kunne vise ad gangen (bl.a. egne GPS-tilføjede steder, der lægger sig
+ * bagest). En dropdown har ingen breddegrænse og viser altid det aktive
+ * sted, uanset hvor mange man har.
+ */
+function SpotSelect() {
   const { view, activeSpotId, setActiveSpot, goto, relations, allSpots } = useApp();
   if (view !== 'jagt') return null;
 
   const rel = (id: string) => relations[id] ?? null;
-  const mine = [
-    ...allSpots.filter((s) => rel(s.id) === 'pinned'),
-    ...allSpots.filter((s) => rel(s.id) === 'followed'),
-  ];
+  const pinned = allSpots.filter((s) => rel(s.id) === 'pinned');
+  const followed = allSpots.filter((s) => rel(s.id) === 'followed');
+  if (pinned.length === 0 && followed.length === 0) return null;
+
+  // Det aktive sted kan i princippet være valgt uden om denne liste (fx via
+  // "Bedst i dag"-rangeringen, uden at være fastgjort/fulgt) — uden dette
+  // ville <select> enten vise et forkert sted som valgt, eller intet.
+  const known = new Set([...pinned, ...followed].map((s) => s.id));
+  const active = !known.has(activeSpotId) ? allSpots.find((s) => s.id === activeSpotId) : undefined;
 
   const pick = (id: string) => { setActiveSpot(id); goto('jagt'); };
 
   return (
-    <div className="spots" role="group" aria-label="Vælg skovområde">
-      {mine.map((s) => {
-        const active = s.id === activeSpotId;
-        const dot = active ? 'var(--gold)' : rel(s.id) === 'pinned' ? 'var(--lichen)' : 'var(--mute)';
-        return (
-          <button key={s.id} className="spot-chip" aria-pressed={active} onClick={() => pick(s.id)}>
-            <span className="dot" style={{ background: dot }} />{s.name}
-          </button>
-        );
-      })}
+    <div className="spot-select-wrap">
+      <select
+        className="spot-select"
+        aria-label="Vælg skovområde"
+        value={activeSpotId}
+        onChange={(e) => pick(e.target.value)}
+      >
+        {active && <option value={active.id}>{active.name}</option>}
+        {pinned.length > 0 && (
+          <optgroup label="Fastgjort">
+            {pinned.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </optgroup>
+        )}
+        {followed.length > 0 && (
+          <optgroup label="Fulgt">
+            {followed.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </optgroup>
+        )}
+      </select>
+      <span className="spot-select-chevron">▾</span>
     </div>
   );
 }
