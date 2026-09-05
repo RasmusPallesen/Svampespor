@@ -12,13 +12,16 @@
 import { communitySpeciesFrom, type CatalogSpecies } from '../../data/catalog';
 import { SEED_FEED, seedFinds } from './seed';
 import { getSupabase } from './supabaseClient';
-import type { FeedItem, FindInput, FindRecord, Profile, SpeciesProposal } from './types';
+import type { FeedItem, FindInput, FindRecord, FindUpdate, Profile, SpeciesProposal } from './types';
 
 export interface Repo {
   /** Er dette laget, der rent faktisk persisterer? */
   readonly persistent: boolean;
   listFinds(): Promise<FindRecord[]>;
   addFind(input: FindInput): Promise<FindRecord>;
+  /** Ret voksested/jordtype/antal/note, eller tilføj et billede (fx et sporeaftryk klar timer senere). */
+  updateFind(id: string, patch: FindUpdate): Promise<FindRecord>;
+  deleteFind(id: string): Promise<void>;
   setShared(id: string, shared: boolean): Promise<void>;
   getProfile(): Promise<Profile | null>;
   saveProfile(profile: Profile | null): Promise<void>;
@@ -48,6 +51,21 @@ class SessionRepo implements Repo {
     const rec: FindRecord = { ...input, id: `local-${++this.seq}`, shared: false };
     this.finds = [rec, ...this.finds];
     return rec;
+  }
+
+  async updateFind(id: string, patch: FindUpdate) {
+    let updated: FindRecord | undefined;
+    this.finds = this.finds.map((f) => {
+      if (f.id !== id) return f;
+      updated = { ...f, ...patch };
+      return updated;
+    });
+    if (!updated) throw new Error('Fund findes ikke');
+    return updated;
+  }
+
+  async deleteFind(id: string) {
+    this.finds = this.finds.filter((f) => f.id !== id);
   }
 
   async setShared(id: string, shared: boolean) {
@@ -95,37 +113,53 @@ class SessionRepo implements Repo {
  * Fuld auth-flow hører til et senere roadmap-punkt — indtil da falder
  * `getRepo()` tilbage til SessionRepo, når nøglerne mangler.
  */
+const FIND_COLUMNS =
+  'id, species_text, habitat, soil, quantity, spot_id, found_at, note, weather, id_source, id_confidence, shared, lat, lon, photos';
+
+/** Delt mellem listFinds/updateFind, så de to aldrig kan komme til at mappe forskelligt. */
+function mapFindRow(r: Record<string, any>): FindRecord {
+  return {
+    id: r.id,
+    species: r.species_text ?? 'Ukendt',
+    habitat: r.habitat ?? '',
+    soil: r.soil ?? '',
+    quantity: r.quantity != null ? String(r.quantity) : '1',
+    spotId: r.spot_id ?? '',
+    spotName: r.weather?.spotName ?? '',
+    note: r.note ?? '',
+    date: r.found_at,
+    snapshot: r.weather?.snapshot ?? { rain14: 0, daysSince: 0, rh: 0, tmax: 0 },
+    photos: Array.isArray(r.photos) && r.photos.length > 0 ? r.photos : undefined,
+    source: r.id_source,
+    confidence: r.id_confidence ?? undefined,
+    shared: r.shared,
+    geo: r.lat != null && r.lon != null ? { lat: r.lat, lon: r.lon } : null,
+  };
+}
+
 class SupabaseRepo implements Repo {
   readonly persistent = true;
   constructor(private readonly db = getSupabase()!) {}
 
+  /**
+   * `getSession()`, ikke `getUser()` — sessionen læses lokalt fra opbevaret
+   * token, uden en netværkstur. Vigtigt for offline-køen (offlineQueue.ts):
+   * en logget-ind bruger uden forbindelse skal opfattes som logget ind, med
+   * selve fund-skrivningen (som reelt kræver netværk) som det, der udløser
+   * "gem lokalt" — ikke en falsk "log ind"-fejl fra selve login-tjekket.
+   */
   private async userId(): Promise<string | null> {
-    const { data } = await this.db.auth.getUser();
-    return data.user?.id ?? null;
+    const { data } = await this.db.auth.getSession();
+    return data.session?.user.id ?? null;
   }
 
   async listFinds(): Promise<FindRecord[]> {
     const { data, error } = await this.db
       .from('finds')
-      .select('id, species_text, habitat, soil, quantity, spot_id, found_at, note, weather, id_source, id_confidence, shared, lat, lon')
+      .select(FIND_COLUMNS)
       .order('found_at', { ascending: false });
     if (error) throw error;
-    return (data ?? []).map((r): FindRecord => ({
-      id: r.id,
-      species: r.species_text ?? 'Ukendt',
-      habitat: r.habitat ?? '',
-      soil: r.soil ?? '',
-      quantity: r.quantity != null ? String(r.quantity) : '1',
-      spotId: r.spot_id ?? '',
-      spotName: r.weather?.spotName ?? '',
-      note: r.note ?? '',
-      date: r.found_at,
-      snapshot: r.weather?.snapshot ?? { rain14: 0, daysSince: 0, rh: 0, tmax: 0 },
-      source: r.id_source,
-      confidence: r.id_confidence ?? undefined,
-      shared: r.shared,
-      geo: r.lat != null && r.lon != null ? { lat: r.lat, lon: r.lon } : null,
-    }));
+    return (data ?? []).map(mapFindRow);
   }
 
   async addFind(input: FindInput): Promise<FindRecord> {
@@ -143,6 +177,7 @@ class SupabaseRepo implements Repo {
         found_at: input.date,
         note: input.note,
         weather: { snapshot: input.snapshot, spotName: input.spotName },
+        photos: input.photos ?? [],
         id_source: input.source,
         id_confidence: input.confidence ?? null,
         shared: false,
@@ -153,6 +188,28 @@ class SupabaseRepo implements Repo {
       .single();
     if (error) throw error;
     return { ...input, id: data.id, shared: false };
+  }
+
+  async updateFind(id: string, patch: FindUpdate): Promise<FindRecord> {
+    const row: Record<string, unknown> = {};
+    if (patch.habitat !== undefined) row.habitat = patch.habitat;
+    if (patch.soil !== undefined) row.soil = patch.soil;
+    if (patch.quantity !== undefined) row.quantity = Number(patch.quantity) || null;
+    if (patch.note !== undefined) row.note = patch.note;
+    if (patch.photos !== undefined) row.photos = patch.photos;
+    const { data, error } = await this.db
+      .from('finds')
+      .update(row)
+      .eq('id', id)
+      .select(FIND_COLUMNS)
+      .single();
+    if (error) throw error;
+    return mapFindRow(data);
+  }
+
+  async deleteFind(id: string) {
+    const { error } = await this.db.from('finds').delete().eq('id', id);
+    if (error) throw error;
   }
 
   async setShared(id: string, shared: boolean) {

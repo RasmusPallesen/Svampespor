@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
-import { HABITATS, SOIL_TYPES, findSpot } from '../data/catalog';
+import { HABITATS, SOIL_TYPES, findSpot, suggestHabitat, suggestSoil } from '../data/catalog';
+import { SpeciesPicker } from '../components/SpeciesPicker';
 import { fmtLongDate } from '../lib/format';
+import { shrink } from '../lib/id/shrink';
 import { read } from '../lib/weather/model';
 import { useApp } from '../state/AppContext';
 import { useCaptureLocation } from '../state/useCaptureLocation';
@@ -29,8 +31,10 @@ function LogForm() {
   const { weather, activeSpotId, addFind, allSpecies, today, showToast, logLocation, setLogLocation } = useApp();
   const captureLocation = useCaptureLocation();
   const [speciesName, setSpeciesName] = useState(allSpecies[0].nameDa);
-  const [habitat, setHabitat] = useState(HABITATS[0]);
-  const [soil, setSoil] = useState(SOIL_TYPES[0]);
+  // Forudfyldt ud fra det aktive steds kendte jordbund/træer (docs/spots.md)
+  // i stedet for altid samme startværdi — kun et forslag, frit at rette.
+  const [habitat, setHabitat] = useState(() => suggestHabitat(findSpot(activeSpotId)));
+  const [soil, setSoil] = useState(() => suggestSoil(findSpot(activeSpotId)));
   const [quantity, setQuantity] = useState('6');
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
@@ -78,13 +82,7 @@ function LogForm() {
       <div className="panel-label">Log et fund</div>
       <div className="field">
         <label htmlFor="fArt">Art</label>
-        <select id="fArt" value={speciesName} onChange={(e) => setSpeciesName(e.target.value)}>
-          {allSpecies.map((s) => (
-            <option key={s.nameDa} value={s.nameDa}>
-              {s.nameDa}{s.reviewed === false ? ' · AI, ikke verificeret' : ''}
-            </option>
-          ))}
-        </select>
+        <SpeciesPicker id="fArt" species={allSpecies} value={speciesName} onChange={setSpeciesName} />
       </div>
       <div className={`warn${high ? '' : ' safe'}`}>
         <span className="ic">{high ? '!' : 'i'}</span>
@@ -169,7 +167,10 @@ function InsightBox() {
 
 function FindCard({ find: f }: { find: FindRecord }) {
   const { profile, openShare } = useApp();
+  const [editing, setEditing] = useState(false);
   const hasPhotos = f.photos && f.photos.length > 0;
+
+  if (editing) return <EditFindForm find={f} onDone={() => setEditing(false)} />;
 
   return (
     <div className="find">
@@ -182,9 +183,11 @@ function FindCard({ find: f }: { find: FindRecord }) {
         <div className="find-top">
           <b>
             {f.species}
-            {f.source === 'ai'
-              ? <span className="src-tag ai">AI-forslag {f.confidence}%</span>
-              : <span className="src-tag">egen bestemmelse</span>}
+            {f.pending
+              ? <span className="src-tag pending">Afventer sync</span>
+              : f.source === 'ai'
+                ? <span className="src-tag ai">AI-forslag {f.confidence}%</span>
+                : <span className="src-tag">egen bestemmelse</span>}
           </b>
           <time>{fmtLongDate(f.date)}</time>
         </div>
@@ -202,11 +205,124 @@ function FindCard({ find: f }: { find: FindRecord }) {
           <div><b>{f.snapshot.rh}%</b><span>luftfugt</span></div>
           <div><b>{f.snapshot.tmax}°</b><span>temp</span></div>
         </div>
-        <div className="find-foot">
-          <button className="share-btn" onClick={() => openShare(f)}>
-            {profile ? 'Del fundet' : 'Del — kræver profil'}
-          </button>
+        {f.pending ? (
+          <p className="pending-note">Gemmes lokalt — synkroniseres, når du har forbindelse igen.</p>
+        ) : (
+          <div className="find-foot">
+            <button className="share-btn" onClick={() => openShare(f)}>
+              {profile ? 'Del fundet' : 'Del — kræver profil'}
+            </button>
+            <button className="share-btn" onClick={() => setEditing(true)}>Rediger</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * Redigering — vigtigst for at kunne tilføje et sporeaftryksbillede, når
+ * det er fremkaldt timer efter selve fundet. Art og kilde kan bevidst ikke
+ * ændres her: at omklassificere et fund er en større handling end at rette
+ * voksested eller lægge et ekstra billede til.
+ */
+function EditFindForm({ find: f, onDone }: { find: FindRecord; onDone: () => void }) {
+  const { updateFind, deleteFind, showToast } = useApp();
+  const [habitat, setHabitat] = useState(f.habitat);
+  const [soil, setSoil] = useState(f.soil);
+  const [quantity, setQuantity] = useState(f.quantity);
+  const [note, setNote] = useState(f.note);
+  const [photos, setPhotos] = useState<string[]>(f.photos ?? []);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const shot = await shrink(file);
+      setPhotos((prev) => [...prev, shot.url]);
+    } catch {
+      showToast('Billedet kunne ikke læses');
+    }
+  };
+
+  const removePhoto = (i: number) => setPhotos((prev) => prev.filter((_, j) => j !== i));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await updateFind(f.id, { habitat, soil, quantity: quantity || '1', note: note.trim(), photos });
+      onDone();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Kunne ikke gemme ændringer');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!window.confirm(`Slet fundet af ${f.species} permanent? Det kan ikke fortrydes.`)) return;
+    try {
+      await deleteFind(f.id);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Kunne ikke slette fundet');
+    }
+  };
+
+  return (
+    <div className="find">
+      <div className="find-body">
+        <div className="find-top"><b>Rediger — {f.species}</b></div>
+
+        {photos.length > 0 && (
+          <div className="edit-shots">
+            {photos.map((p, i) => (
+              <div className="edit-shot" key={i}>
+                <img src={p} alt="" />
+                <button className="x" onClick={() => removePhoto(i)} aria-label="Fjern billede">×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button className="btn ghost" style={{ marginBottom: 14 }} onClick={() => fileRef.current?.click()}>
+          + Tilføj billede — fx sporeaftrykket, når det er klar
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={addPhoto} />
+
+        <div className="field">
+          <label htmlFor={`eHab-${f.id}`}>Voksested</label>
+          <select id={`eHab-${f.id}`} value={habitat} onChange={(e) => setHabitat(e.target.value)}>
+            {HABITATS.map((h) => <option key={h}>{h}</option>)}
+          </select>
         </div>
+        <div className="field field-row">
+          <div>
+            <label htmlFor={`eJord-${f.id}`}>Jordtype</label>
+            <select id={`eJord-${f.id}`} value={soil} onChange={(e) => setSoil(e.target.value)}>
+              {SOIL_TYPES.map((j) => <option key={j}>{j}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={`eAnt-${f.id}`}>Antal</label>
+            <input type="text" id={`eAnt-${f.id}`} inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+          </div>
+        </div>
+        <div className="field">
+          <label htmlFor={`eNote-${f.id}`}>Feltnote</label>
+          <textarea id={`eNote-${f.id}`} value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+
+        <div className="find-foot">
+          <button className="btn" style={{ flex: 2 }} onClick={save} disabled={saving}>
+            {saving ? 'Gemmer…' : 'Gem ændringer'}
+          </button>
+          <button className="share-btn" onClick={onDone}>Annullér</button>
+        </div>
+        <button className="link-btn danger" onClick={remove} style={{ marginTop: 12 }}>Slet fund</button>
       </div>
     </div>
   );
