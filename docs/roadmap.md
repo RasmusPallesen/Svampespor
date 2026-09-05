@@ -21,7 +21,9 @@
 - [ ] Billedupload til Supabase Storage, tre slots (i dag: data-URL'er i session)
 - [x] Artsbestemmelse via Edge Function (nøglen aldrig i frontend)
 - [ ] Offline-kø: log fund uden dækning, synk senere
+- [x] Rettet: appen viste sommetider "Demodata" selvom det meste af vejret reelt var hentet — `fetchForSpots` brugte `Promise.all`, så ét fejlende gitterfelt (oftest Open-Meteos 429, mere sandsynligt efter kataloget voksede til 15 spredte steder) slog HELE appen over i simuleret vejr. Nu er hver celle uafhængig (`allSettled` + 3 forsøg med backoff), og kun de spots i netop den fejlende celle falder tilbage — "Live" betyder nu "mindst ét gitterfelt lykkedes", ikke "alle". Se `src/lib/weather/openMeteo.ts` og dens testfil.
 - [ ] DMI Open Data ved siden af Open-Meteo
+- [ ] Rigtig server-side vejrcache i `weather_cells` (tabellen findes, bruges ikke endnu) — den egentlige fix for at undgå at ramme Open-Meteos rate-limit overhovedet, ikke kun at overleve den pænt
 
 ## Fase 3 — fællesskab
 - [x] Tier 2: fællesskabsarter. Bestem gemmer nu sit eget forslag til modningsvindue + forvekslinger som en uverificeret art i `species`-tabellen, hvis den ikke allerede er en kerneart — løser "kun 7 arter" uden at gætte de øvrige ~3000 danske arters data i forvejen. Vises i Log et fund, tydeligt mærket "AI, ikke verificeret"; indgår bevidst ikke i Jager/rangering, som forudsætter data, en enkelt AI-vurdering ikke giver. Se docs/species.md.

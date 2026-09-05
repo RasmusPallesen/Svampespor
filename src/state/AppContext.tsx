@@ -198,10 +198,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (async () => {
       const meta = SPOTS.map((s) => ({ id: s.id, lat: s.lat, lon: s.lon }));
       try {
-        const got = await fetchForSpots(meta);
+        const { weather: got, liveCells } = await fetchForSpots(meta);
         if (cancelled) return;
         setWeather(got);
-        setLive(true);
+        // "Live" betyder her "mindst ét gitterfelt fik svar" — fetchForSpots
+        // simulerer allerede enkeltvis pr. celle, så et par fjerne steder,
+        // der ramte en 429, skal ikke tvinge HELE appen i demodata, når
+        // resten reelt har rigtigt vejr.
+        setLive(liveCells > 0);
       } catch {
         if (cancelled) return;
         const sim: Record<string, WeatherSeries> = {};

@@ -6,6 +6,7 @@
  * stationsmålinger. Kræver gratis nøgle via GovCloud-portalen.
  */
 
+import { simulateWeather } from '../../data/demoWeather';
 import type { DayWeather, WeatherSeries } from './model';
 
 const BASE = 'https://api.open-meteo.com/v1/forecast';
@@ -100,11 +101,47 @@ export async function fetchCell(cell: string, opts: FetchOpts = {}): Promise<Wea
   return parse((await res.json()) as OpenMeteoResponse, todayIso);
 }
 
-/** Hent flere steder på én gang, med deduplikering på gittercelle. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Samme kald som `fetchCell`, men prøver igen på en fejl i stedet for at
+ * give op med det samme. Et enkelt 429/timeout på ét gitterfelt skal ikke
+ * kunne slå hele appen over i demodata — se `fetchForSpots`.
+ */
+async function fetchCellResilient(cell: string, opts: FetchOpts, attempts = 3): Promise<WeatherSeries> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetchCell(cell, opts);
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) await sleep(500 * 2 ** i); // 500 ms, 1000 ms
+    }
+  }
+  throw lastErr;
+}
+
+export interface SpotWeatherResult {
+  weather: Record<string, WeatherSeries>;
+  /** Antal gittefelter der reelt fik svar fra Open-Meteo, mod det samlede antal. */
+  liveCells: number;
+  totalCells: number;
+}
+
+/**
+ * Hent flere steder på én gang, med deduplikering på gittercelle.
+ *
+ * Hver celle hentes uafhængigt (`allSettled`, ikke `all`) — falder ét felt
+ * (typisk 429 fra Open-Meteos rate-limit, som blev mere sandsynlig, da
+ * kataloget voksede fra 10 til 15 spredte steder), simuleres KUN de
+ * spot-id'er, der sad i netop den celle. Resten beholder rigtige data i
+ * stedet for at hele appen falder tilbage til demodata på grund af ét
+ * fjernt sted, ingen lige nu kigger på.
+ */
 export async function fetchForSpots(
   spots: { id: string; lat: number; lon: number }[],
   opts: FetchOpts = {},
-): Promise<Record<string, WeatherSeries>> {
+): Promise<SpotWeatherResult> {
   const cells = new Map<string, string[]>();
   for (const s of spots) {
     const c = gridCell(s.lat, s.lon);
@@ -113,12 +150,23 @@ export async function fetchForSpots(
     else cells.set(c, [s.id]);
   }
 
+  const entries = [...cells];
+  const settled = await Promise.allSettled(entries.map(([cell]) => fetchCellResilient(cell, opts)));
+
   const out: Record<string, WeatherSeries> = {};
-  await Promise.all(
-    [...cells].map(async ([cell, ids]) => {
-      const w = await fetchCell(cell, opts);
-      for (const id of ids) out[id] = w;
-    }),
-  );
-  return out;
+  let liveCells = 0;
+  settled.forEach((result, i) => {
+    const [cell, ids] = entries[i];
+    if (result.status === 'fulfilled') {
+      liveCells++;
+      for (const id of ids) out[id] = result.value;
+    } else {
+      console.error(`Open-Meteo fejlede for celle ${cell}, bruger simuleret vejr for ${ids.length} sted(er):`, result.reason);
+      const { lat, lon } = cellCenter(cell);
+      const sim = simulateWeather(lat, lon);
+      for (const id of ids) out[id] = sim;
+    }
+  });
+
+  return { weather: out, liveCells, totalCells: entries.length };
 }
