@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 
-import { findSpot } from '../data/catalog';
 import { fmtWeekday, cap, monthName } from '../lib/format';
 import { band, read, seasonState, type Reading, type SeasonState, type WeatherSeries } from '../lib/weather/model';
 import { BAND_COLOR, Dial } from '../components/Dial';
@@ -9,8 +8,8 @@ import { SpotPanel } from '../components/SpotPanel';
 import { useApp } from '../state/AppContext';
 
 export function JagtView() {
-  const { weather, weatherReady, activeSpotId, targetSpecies } = useApp();
-  const spot = findSpot(activeSpotId);
+  const { weather, weatherReady, activeSpotId, targetSpecies, allSpots } = useApp();
+  const spot = allSpots.find((s) => s.id === activeSpotId);
   const w = weather[activeSpotId];
 
   const reading = useMemo(() => (w ? read(w, targetSpecies) : null), [w, targetSpecies]);

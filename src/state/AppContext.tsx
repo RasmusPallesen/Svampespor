@@ -17,10 +17,10 @@ import { signInWithApple, signInWithGoogle, signInWithMagicLink, signOutAuth } f
 import { enqueueFind, isOfflineLikeError, listQueuedFinds, removeQueuedFind } from '../lib/data/offlineQueue';
 import { getRepo } from '../lib/data/repo';
 import { getSupabase } from '../lib/data/supabaseClient';
-import type { FindInput, FindRecord, FindUpdate, Profile, ProfilePrefs, SpeciesProposal } from '../lib/data/types';
+import type { FindInput, FindRecord, FindUpdate, Profile, ProfilePrefs, SpeciesProposal, UserSpotInput } from '../lib/data/types';
 import type { WeatherSeries } from '../lib/weather/model';
 import { fetchForSpots } from '../lib/weather/openMeteo';
-import type { Relation } from '../lib/spots/ranking';
+import type { Relation, Spot } from '../lib/spots/ranking';
 
 export interface AuthUser {
   id: string;
@@ -72,6 +72,11 @@ interface AppState {
 
   activeSpotId: string;
   setActiveSpot(id: string): void;
+
+  /** Systemsteder + brugerens egne, samlet — brug denne, ikke SPOTS direkte. */
+  allSpots: Spot[];
+  /** Tilføjer et sted ud fra givne koordinater (typisk brugerens nuværende position). */
+  addUserSpot(input: UserSpotInput): Promise<Spot>;
 
   targetSpecies: CatalogSpecies;
   setTargetSpeciesName(name: string): void;
@@ -132,6 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pendingFinds, setPendingFinds] = useState(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [communitySpecies, setCommunitySpecies] = useState<CatalogSpecies[]>([]);
+  const [userSpots, setUserSpots] = useState<Spot[]>([]);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -153,6 +159,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastTimer.current = window.setTimeout(() => setToast(null), 2200);
   }, []);
 
+  /* ---- brugerens egne steder ----
+   * Systemsteder fylder vejret ved boot (effekten nedenfor); et brugertilføjet
+   * sted dukker først op senere — enten hentet ved login, eller oprettet midt
+   * i en session — så det henter sit eget vejr med det samme i stedet for at
+   * vente på en ny fuld runde.
+   */
+  const fetchSpotWeather = useCallback(async (spots: Spot[]) => {
+    if (!spots.length) return;
+    try {
+      const { weather: got } = await fetchForSpots(spots.map((s) => ({ id: s.id, lat: s.lat, lon: s.lon })));
+      setWeather((prev) => ({ ...prev, ...got }));
+    } catch {
+      setWeather((prev) => {
+        const next = { ...prev };
+        for (const s of spots) next[s.id] = simulateWeather(s.lat, s.lon, today);
+        return next;
+      });
+    }
+  }, [today]);
+
+  const refreshUserSpots = useCallback(async () => {
+    try {
+      const spots = await repo.listUserSpots();
+      setUserSpots(spots);
+      void fetchSpotWeather(spots);
+    } catch {
+      setUserSpots([]);
+    }
+  }, [repo, fetchSpotWeather]);
+
+  const addUserSpot = useCallback(async (input: UserSpotInput) => {
+    const spot = await repo.addUserSpot(input);
+    setUserSpots((prev) => [...prev, spot]);
+    void fetchSpotWeather([spot]);
+    return spot;
+  }, [repo, fetchSpotWeather]);
+
+  const allSpots = useMemo(() => [...SPOTS, ...userSpots], [userSpots]);
+
   /* ---- boot + auth: hent fund/profil, og hold dem i sync med login-status ----
    * Session-adapteren har ingen rigtig auth — hent bare med det samme. I
    * Supabase-tilstand afgør RLS, hvad et kald ser, så et login/logout skal
@@ -163,6 +208,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const syncFindsAndProfile = () => {
       repo.listFinds().then(setFinds).catch(() => setFinds([]));
       repo.getProfile().then(setProfile).catch(() => setProfile(null));
+      refreshUserSpots();
     };
 
     if (!db) {
@@ -197,7 +243,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     return () => sub.subscription.unsubscribe();
-  }, [repo]);
+  }, [repo, refreshUserSpots]);
 
   useEffect(() => {
     let cancelled = false;
@@ -415,6 +461,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     profile, createProfile, logOut, setHandle, togglePref,
     authUser, authReady, authWithGoogle, authWithApple, authWithMagicLink,
     activeSpotId, setActiveSpot: setActiveSpotId,
+    allSpots, addUserSpot,
     targetSpecies, setTargetSpeciesName: setTargetName,
     allSpecies, ensureSpecies,
     relations, cycleRelation,

@@ -10,9 +10,13 @@
  */
 
 import { communitySpeciesFrom, type CatalogSpecies } from '../../data/catalog';
+import type { Spot } from '../spots/ranking';
 import { SEED_FEED, seedFinds } from './seed';
 import { getSupabase } from './supabaseClient';
-import type { FeedItem, FindInput, FindRecord, FindUpdate, Profile, SpeciesProposal } from './types';
+import type { FeedItem, FindInput, FindRecord, FindUpdate, Profile, SpeciesProposal, UserSpotInput } from './types';
+
+/** Rejsetid kan ikke afledes af GPS-koordinater alene — se `addUserSpot`-kommentaren. */
+const DEFAULT_USER_SPOT_TRAVEL_MIN = 20;
 
 export interface Repo {
   /** Er dette laget, der rent faktisk persisterer? */
@@ -30,6 +34,9 @@ export interface Repo {
   listCommunitySpecies(): Promise<CatalogSpecies[]>;
   /** Gemmer et Bestem-forslag som ny fællesskabsart, hvis navnet ikke allerede findes. */
   ensureSpecies(proposal: SpeciesProposal): Promise<void>;
+  /** Brugerens egne steder — kun synlige for dem selv (RLS), i modsætning til systemsteder. */
+  listUserSpots(): Promise<Spot[]>;
+  addUserSpot(input: UserSpotInput): Promise<Spot>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -42,6 +49,8 @@ class SessionRepo implements Repo {
   private profile: Profile | null = null;
   private seq = 0;
   private communitySpecies: CatalogSpecies[] = [];
+  private userSpots: Spot[] = [];
+  private spotSeq = 0;
 
   async listFinds() {
     return [...this.finds];
@@ -100,6 +109,24 @@ class SessionRepo implements Repo {
         window: proposal.window, rainMm: proposal.rainMm, lookalikes: proposal.lookalikes,
       }),
     ];
+  }
+
+  async listUserSpots() {
+    return [...this.userSpots];
+  }
+
+  async addUserSpot(input: UserSpotInput): Promise<Spot> {
+    const spot: Spot = {
+      id: `user-spot-${++this.spotSeq}`,
+      name: input.name,
+      region: input.region?.trim() || 'Eget sted',
+      lat: input.lat,
+      lon: input.lon,
+      travelMin: DEFAULT_USER_SPOT_TRAVEL_MIN,
+      habitats: [],
+    };
+    this.userSpots = [...this.userSpots, spot];
+    return spot;
   }
 }
 
@@ -284,6 +311,53 @@ class SupabaseRepo implements Repo {
       { onConflict: 'name_da', ignoreDuplicates: true },
     );
     if (error) throw error;
+  }
+
+  async listUserSpots(): Promise<Spot[]> {
+    const uid = await this.userId();
+    if (!uid) return []; // ikke logget ind — ingen egne steder at hente endnu
+    const { data, error } = await this.db
+      .from('spots')
+      .select('id, name, region, lat, lon')
+      .eq('source', 'user')
+      .eq('owner_id', uid)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map((r): Spot => ({
+      id: r.id,
+      name: r.name,
+      region: r.region ?? 'Eget sted',
+      lat: r.lat,
+      lon: r.lon,
+      // Rejsetid kan ikke afledes af koordinaterne alene, og `user_spots.travel_min`
+      // (skemaets tiltænkte plads til det) er ikke i brug endnu — samme
+      // pragmatiske grænse som resten af rangeringen kører med i dag.
+      travelMin: DEFAULT_USER_SPOT_TRAVEL_MIN,
+      habitats: [],
+    }));
+  }
+
+  async addUserSpot(input: UserSpotInput): Promise<Spot> {
+    const uid = await this.userId();
+    if (!uid) throw new Error('Log ind for at tilføje et sted');
+    const { data, error } = await this.db
+      .from('spots')
+      .insert({
+        name: input.name,
+        region: input.region?.trim() || null,
+        source: 'user',
+        owner_id: uid,
+        habitats: [],
+        // Samme WKT-mønster som finds.geom — geography_in() accepterer et rent tekstpunkt.
+        geom: `POINT(${input.lon} ${input.lat})`,
+      })
+      .select('id, name, region, lat, lon')
+      .single();
+    if (error) throw error;
+    return {
+      id: data.id, name: data.name, region: data.region ?? 'Eget sted',
+      lat: data.lat, lon: data.lon, travelMin: DEFAULT_USER_SPOT_TRAVEL_MIN, habitats: [],
+    };
   }
 }
 
