@@ -244,17 +244,20 @@
 .avatar-btn:hover { border-color: var(--lichen); }
 .avatar-btn.out { color: var(--mute); font-family: var(--mono); font-size: 15px; }
 
-/* ---------- spot-chips ---------- */
-.spots { display: flex; gap: 8px; overflow-x: auto; padding: 6px 20px 16px; scrollbar-width: none; }
-.spots::-webkit-scrollbar { display: none; }
-.spot-chip {
-  flex: 0 0 auto; background: var(--humus); border: 1px solid var(--bark); color: var(--lichen);
-  font-family: var(--body); font-size: 13px; font-weight: 500; padding: 8px 14px; border-radius: 99px;
-  cursor: pointer; transition: border-color 0.18s, color 0.18s, background 0.18s;
+/* ---------- sted-vælger ---------- */
+.spot-select-wrap { position: relative; margin: 6px 20px 16px; }
+.spot-select {
+  width: 100%; appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  background: var(--humus); border: 1px solid var(--bark); color: var(--paper);
+  font-family: var(--body); font-size: 14.5px; font-weight: 500;
+  padding: 12px 36px 12px 14px; border-radius: 10px; cursor: pointer;
+  outline: none; transition: border-color 0.18s;
 }
-.spot-chip:hover { border-color: var(--lichen); }
-.spot-chip[aria-pressed='true'] { background: var(--raised); border-color: var(--lichen); color: var(--paper); }
-.spot-chip .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; vertical-align: middle; background: var(--mute); }
+.spot-select:hover { border-color: var(--lichen); }
+.spot-select-chevron {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--mute); font-size: 12px; pointer-events: none;
+}
 
 /* ---------- tabs / nav ---------- */
 nav {
@@ -294,7 +297,7 @@ select, input[type='text'], textarea {
   width: 100%; background: var(--loam); border: 1px solid var(--bark); color: var(--paper);
   font-family: var(--body); font-size: 14px; padding: 10px 12px; border-radius: 8px; outline: none; transition: border-color 0.18s;
 }
-select:focus, input:focus, textarea:focus, button:focus-visible, .spot-chip:focus-visible {
+select:focus, input:focus, textarea:focus, button:focus-visible {
   border-color: var(--lichen); outline: 2px solid rgba(159, 181, 140, 0.35); outline-offset: 1px;
 }
 textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
