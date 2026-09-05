@@ -41,6 +41,9 @@ const DEFAULT_RELATIONS: Record<string, Relation> = Object.fromEntries(
   DEFAULT_RELATION_NAMES.map(([name, rel]) => [SPOTS.find((s) => s.name === name)?.id ?? name, rel]),
 );
 
+/** Overlever en genindlæsning — se hvorfor ved `setActiveSpotId` nedenfor. */
+const ACTIVE_SPOT_KEY = 'svampespor:activeSpotId';
+
 interface AppState {
   repoPersistent: boolean;
   today: Date;
@@ -141,7 +144,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
-  const [activeSpotId, setActiveSpotId] = useState<string>(SPOTS[0].id);
+  const [activeSpotId, setActiveSpotIdState] = useState<string>(() => {
+    try {
+      return localStorage.getItem(ACTIVE_SPOT_KEY) || SPOTS[0].id;
+    } catch {
+      return SPOTS[0].id; // fx Safari privat browsing, hvor storage kan kaste
+    }
+  });
+  // Uden dette bouncede en genindlæsning altid tilbage til Gribskov —
+  // også når det aktive sted var ens eget nytilføjede, ikke et systemsted.
+  // Selve stedet valideres ikke her: peger id'et på et brugersted, der endnu
+  // ikke er hentet (userSpots er tom lige efter boot), viser JagtView bare
+  // "LÆSER SKOVBUNDEN…", indtil refreshUserSpots har fyldt allSpots ud.
+  const setActiveSpotId = useCallback((id: string) => {
+    setActiveSpotIdState(id);
+    try { localStorage.setItem(ACTIVE_SPOT_KEY, id); } catch { /* ingen storage — ikke fatalt */ }
+  }, []);
   const [targetName, setTargetName] = useState<string>(SPECIES[0].nameDa);
   const [relations, setRelations] = useState<Record<string, Relation>>(DEFAULT_RELATIONS);
   const [segment, setSegment] = useState<Segment>('idag');
@@ -179,13 +197,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [today]);
 
+  // `syncFindsAndProfile` kalder denne både fra getSession() og fra
+  // onAuthStateChange — de kan i teorien lande i vilkårlig rækkefølge. Uden
+  // dette id-tjek kunne et tidligt, endnu-ikke-hydreret kald (ingen session
+  // endnu, tomt resultat) nå at overskrive et senere kalds rigtige data,
+  // hvis det af en eller anden grund resolver efter. Kun det seneste kald
+  // vinder, uanset hvilket der rent faktisk svarer sidst.
+  const userSpotsCallId = useRef(0);
   const refreshUserSpots = useCallback(async () => {
+    const callId = ++userSpotsCallId.current;
     try {
       const spots = await repo.listUserSpots();
+      if (userSpotsCallId.current !== callId) return;
       setUserSpots(spots);
       void fetchSpotWeather(spots);
     } catch {
-      setUserSpots([]);
+      if (userSpotsCallId.current === callId) setUserSpots([]);
     }
   }, [repo, fetchSpotWeather]);
 
