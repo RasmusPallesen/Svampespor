@@ -604,6 +604,9 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
 .rank-n { flex: 0 0 26px; font-family: var(--mono); font-size: 11px; color: var(--mute); padding-top: 11px; text-align: center; }
 .rank-n.top { color: var(--gold); font-weight: 600; }
 .rank-body { flex: 1; min-width: 0; cursor: pointer; }
+.rank-edit { flex: 1; min-width: 0; }
+.rank-edit .field { margin-bottom: 10px; }
+.rank-edit .field:last-of-type { margin-bottom: 12px; }
 .rank-title { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
 .rank-title b { font-size: 14.5px; font-weight: 600; }
 .rank-title .sc { font-family: var(--mono); font-size: 12px; font-weight: 600; margin-left: auto; }

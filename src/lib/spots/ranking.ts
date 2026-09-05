@@ -21,6 +21,8 @@ export interface Spot {
   /** rejsetid i minutter fra brugerens base — ikke luftlinje */
   travelMin: number;
   habitats: string[];
+  /** true for et brugertilføjet sted (source='user') — styrer kun UI (redigér/slet-knapper), ikke rangeringen. */
+  isUserSpot?: boolean;
 }
 
 export type Relation = 'pinned' | 'followed' | 'hidden';
