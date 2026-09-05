@@ -8,7 +8,7 @@
 
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
-  type ReactNode,
+  type ReactNode, type SetStateAction,
 } from 'react';
 
 import { SPECIES, SPOTS, type CatalogSpecies } from '../data/catalog';
@@ -43,6 +43,8 @@ const DEFAULT_RELATIONS: Record<string, Relation> = Object.fromEntries(
 
 /** Overlever en genindlæsning — se hvorfor ved `setActiveSpotId` nedenfor. */
 const ACTIVE_SPOT_KEY = 'svampespor:activeSpotId';
+/** Se hvorfor ved `relations`-useState nedenfor. */
+const RELATIONS_KEY = 'svampespor:relations';
 
 interface AppState {
   repoPersistent: boolean;
@@ -165,7 +167,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(ACTIVE_SPOT_KEY, id); } catch { /* ingen storage — ikke fatalt */ }
   }, []);
   const [targetName, setTargetName] = useState<string>(SPECIES[0].nameDa);
-  const [relations, setRelations] = useState<Record<string, Relation>>(DEFAULT_RELATIONS);
+  const [relations, setRelationsState] = useState<Record<string, Relation>>(() => {
+    try {
+      const raw = localStorage.getItem(RELATIONS_KEY);
+      // Gemte valg vinder over defaults — men et sted, du aldrig har rørt,
+      // skal stadig starte i sin tiltænkte tilstand (Gribskov fastgjort osv.).
+      return raw ? { ...DEFAULT_RELATIONS, ...JSON.parse(raw) } : DEFAULT_RELATIONS;
+    } catch {
+      return DEFAULT_RELATIONS; // ugyldigt JSON eller storage utilgængelig — fald tilbage, ikke fatalt
+    }
+  });
+  // Uden dette overlevede et fastgjort/fulgt/skjult valg kun til næste
+  // genindlæsning — det var det, der fik "Rønneholmsvej 29" til at falde ud
+  // af stedvælgeren igen: den blev sat til 'followed' ved oprettelsen, men
+  // det lå kun i React-state. `rankSpots` har siden fået sin egen uafhængige
+  // sikkerhed for egne steder (isUserSpot → 'followed' som standard), men
+  // en eksplicit fastgjort/skjult skal også kunne overleve en genindlæsning.
+  const setRelations = useCallback((next: SetStateAction<Record<string, Relation>>) => {
+    setRelationsState((prev) => {
+      const resolved = typeof next === 'function' ? next(prev) : next;
+      try { localStorage.setItem(RELATIONS_KEY, JSON.stringify(resolved)); } catch { /* ingen storage — ikke fatalt */ }
+      return resolved;
+    });
+  }, []);
   const [segment, setSegment] = useState<Segment>('idag');
   const [showHidden, setShowHidden] = useState(false);
   const [sharing, setSharing] = useState(false);
