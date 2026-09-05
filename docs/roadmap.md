@@ -16,6 +16,7 @@
 
 ## Fase 2 — felten
 - [x] "Voksested" i log/bestem splittet i to felter: Voksested (biom/træ) og Jordtype (muldbund/morbund/kalkrig/sandet/mose/ved ikke), sourcet fra samme jordbundsviden som docs/spots.md. Sendes nu også med til Bestems AI-prompt og delingens billedtekst
+- [x] Brugeren kan tilføje sit eget sted ud fra nuværende GPS-position — `spots_write`/`spots_read`-RLS-politikkerne fra migration 0001 var skrevet til netop dette fra start (source='user', kun synligt for ejeren), kun klienten manglede. Nyt sted henter straks sit eget vejr og indgår i rangeringen på lige fod med systemsteder. Rejsetid kan ikke afledes af koordinaterne alene og sættes til en fast standardværdi (20 min) — `user_spots.travel_min`, skemaets tiltænkte plads til rigtig per-bruger rejsetid, er stadig ikke i brug
 - [ ] Kort med steder og egne nåle (MapLibre + PostGIS) — positionsdata findes nu på fund, mangler kortvisning
 - [ ] Hemmelige nåle med klientside-kryptering
 - [ ] Billedupload til Supabase Storage, tre slots (i dag: data-URL'er i session)

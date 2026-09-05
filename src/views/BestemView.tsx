@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { HABITATS, SOIL_TYPES, SHOT_SLOTS, SPECIES, findSpecies, findSpot, suggestHabitat, suggestSoil } from '../data/catalog';
+import { HABITATS, SOIL_TYPES, SHOT_SLOTS, SPECIES, findSpecies, suggestHabitat, suggestSoil } from '../data/catalog';
 import { identify } from '../lib/id/identify';
 import { shrink } from '../lib/id/shrink';
 import type { Candidate, IdResult, Shot } from '../lib/id/types';
@@ -18,11 +18,12 @@ const SEV_LABEL: Record<string, string> = { doedelig: 'dødelig', giftig: 'gifti
 const sevClass = (s: string) => (s === 'doedelig' ? 'dodelig' : s === 'giftig' ? 'giftig' : 'uspiselig');
 
 export function BestemView() {
-  const { weather, activeSpotId, addFind, ensureSpecies, today, goto, showToast } = useApp();
+  const { weather, activeSpotId, allSpots, addFind, ensureSpecies, today, goto, showToast } = useApp();
   const captureLocation = useCaptureLocation();
+  const activeSpot = allSpots.find((s) => s.id === activeSpotId);
   const [shots, setShots] = useState<(Shot | null)[]>([null, null, null]);
-  const [habitat, setHabitat] = useState(() => suggestHabitat(findSpot(activeSpotId)));
-  const [soil, setSoil] = useState(() => suggestSoil(findSpot(activeSpotId)));
+  const [habitat, setHabitat] = useState(() => suggestHabitat(activeSpot));
+  const [soil, setSoil] = useState(() => suggestSoil(activeSpot));
   const [obs, setObs] = useState('');
   const [result, setResult] = useState<Result>({ kind: 'idle' });
 
@@ -67,7 +68,7 @@ export function BestemView() {
   };
 
   const saveCandidate = async (c: Candidate) => {
-    const spot = findSpot(activeSpotId);
+    const spot = activeSpot;
     const w = weather[activeSpotId];
     if (!spot || !w) { showToast('Vejret er ikke hentet endnu'); return; }
     const r = read(w, SPECIES[0]); // snapshot-felterne er artsuafhængige

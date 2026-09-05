@@ -12,6 +12,20 @@ import type { Lookalike } from '../id/types';
 export type IdSource = 'user' | 'ai' | 'community';
 
 /**
+ * Et brugertilføjet sted — `spots_write`/`spots_read`-politikkerne i
+ * migration 0001 var skrevet til netop dette fra start (source='user',
+ * owner_id), kun klienten manglede. Kun synligt for den, der tilføjede det
+ * (RLS), i modsætning til systemsteder. `lat`/`lon` kommer typisk direkte
+ * fra `navigator.geolocation` — det ER hele pointen med feltet.
+ */
+export interface UserSpotInput {
+  name: string;
+  region?: string;
+  lat: number;
+  lon: number;
+}
+
+/**
  * Forslag til en ny "fællesskabsart" — Tier 2, se docs/roadmap.md.
  *
  * Bestem foreslår selv `window`/`rainMm`/`lookalikes` for enhver art, den

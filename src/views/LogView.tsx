@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 
-import { HABITATS, SOIL_TYPES, findSpot, suggestHabitat, suggestSoil } from '../data/catalog';
+import { HABITATS, SOIL_TYPES, suggestHabitat, suggestSoil } from '../data/catalog';
 import { SpeciesPicker } from '../components/SpeciesPicker';
 import { fmtLongDate } from '../lib/format';
 import { shrink } from '../lib/id/shrink';
@@ -28,13 +28,14 @@ export function LogView() {
 /* ------------------------------------------------------------------ */
 
 function LogForm() {
-  const { weather, activeSpotId, addFind, allSpecies, today, showToast, logLocation, setLogLocation } = useApp();
+  const { weather, activeSpotId, allSpots, addFind, allSpecies, today, showToast, logLocation, setLogLocation } = useApp();
   const captureLocation = useCaptureLocation();
+  const activeSpot = allSpots.find((s) => s.id === activeSpotId);
   const [speciesName, setSpeciesName] = useState(allSpecies[0].nameDa);
   // Forudfyldt ud fra det aktive steds kendte jordbund/træer (docs/spots.md)
   // i stedet for altid samme startværdi — kun et forslag, frit at rette.
-  const [habitat, setHabitat] = useState(() => suggestHabitat(findSpot(activeSpotId)));
-  const [soil, setSoil] = useState(() => suggestSoil(findSpot(activeSpotId)));
+  const [habitat, setHabitat] = useState(() => suggestHabitat(activeSpot));
+  const [soil, setSoil] = useState(() => suggestSoil(activeSpot));
   const [quantity, setQuantity] = useState('6');
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
@@ -43,7 +44,7 @@ function LogForm() {
   const high = species.risk === 'high';
 
   const save = async () => {
-    const spot = findSpot(activeSpotId);
+    const spot = activeSpot;
     const w = weather[activeSpotId];
     if (!spot || !w) { showToast('Vejret er ikke hentet endnu'); return; }
     const r = read(w, species);

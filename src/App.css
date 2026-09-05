@@ -367,6 +367,10 @@ textarea { resize: vertical; min-height: 66px; font-size: 13.5px; }
   background: rgba(227, 167, 60, 0.08); border: 1px solid rgba(227, 167, 60, 0.3);
   border-radius: 8px; padding: 9px 11px; line-height: 1.5;
 }
+/* ---------- eget sted ud fra GPS ---------- */
+.add-spot { background: var(--loam); border: 1px solid var(--bark); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+.add-spot-hint { font-size: 12px; color: var(--mute); line-height: 1.5; margin-bottom: 12px; }
+
 /* ---------- redigering af fund ---------- */
 .edit-shots { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .edit-shot { position: relative; width: 72px; height: 72px; border-radius: 9px; overflow: hidden; border: 1px solid var(--bark); flex: 0 0 auto; }

@@ -1,4 +1,3 @@
-import { SPOTS, findSpot } from './data/catalog';
 import { AppProvider, useApp, type View } from './state/AppContext';
 import { JagtView } from './views/JagtView';
 import { BestemView } from './views/BestemView';
@@ -80,13 +79,13 @@ function Nav() {
 }
 
 function SpotChips() {
-  const { view, activeSpotId, setActiveSpot, goto, relations } = useApp();
+  const { view, activeSpotId, setActiveSpot, goto, relations, allSpots } = useApp();
   if (view !== 'jagt') return null;
 
   const rel = (id: string) => relations[id] ?? null;
   const mine = [
-    ...SPOTS.filter((s) => rel(s.id) === 'pinned'),
-    ...SPOTS.filter((s) => rel(s.id) === 'followed'),
+    ...allSpots.filter((s) => rel(s.id) === 'pinned'),
+    ...allSpots.filter((s) => rel(s.id) === 'followed'),
   ];
 
   const pick = (id: string) => { setActiveSpot(id); goto('jagt'); };
@@ -107,9 +106,9 @@ function SpotChips() {
 }
 
 function PassiveBand() {
-  const { view, activeSpotId, goto } = useApp();
+  const { view, activeSpotId, goto, allSpots } = useApp();
   if (view !== 'bestem' && view !== 'log') return null;
-  const spot = findSpot(activeSpotId);
+  const spot = allSpots.find((s) => s.id === activeSpotId);
   if (!spot) return null;
   const verb = view === 'bestem' ? 'Fundet gemmes på' : 'Aktivt område';
   return (
